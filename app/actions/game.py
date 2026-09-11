@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import math
+import re
 import subprocess
 import time
 from typing import Any
@@ -40,18 +41,17 @@ def _fail(t: str, started: float, msg: str) -> ActionResult:
     return ActionResult(t, False, msg, int((time.time() - started) * 1000))
 
 
-def screen_size(adb) -> tuple[int, int] | None:
-    """Ukuran layar aktif (lebar, tinggi) dalam piksel."""
+def physical_size(adb) -> tuple[int, int] | None:
+    """Ukuran fisik layar - TIDAK berubah walau HP diputar."""
     try:
         proc = adb.run(["shell", "wm", "size"], timeout=10)
     except Exception:                               # noqa: BLE001
         return None
     if proc.returncode != 0:
         return None
-    # Output: "Physical size: 1080x2280" (+ "Override size: ..." bila ada)
-    text = proc.stdout or ""
+
     size = None
-    for line in text.splitlines():
+    for line in (proc.stdout or "").splitlines():
         if ":" not in line:
             continue
         value = line.split(":", 1)[1].strip()
@@ -61,18 +61,65 @@ def screen_size(adb) -> tuple[int, int] | None:
                 size = (int(w), int(h))
             except ValueError:
                 continue
-        # "Override size" menimpa "Physical size" kalau ada.
+        # "Override size" muncul setelah "Physical size" dan menimpanya.
+    return size
+
+
+def current_rotation(adb) -> int | None:
+    """Rotasi layar saat ini: 0, 1, 2, atau 3 (0 = tegak).
+
+    `wm size` TIDAK berguna untuk ini - ia selalu melaporkan ukuran fisik
+    walau HP sedang mendatar. Rotasi nyata hanya bisa dibaca dari dumpsys.
+    """
+    try:
+        proc = adb.run(["shell", "dumpsys", "window"], timeout=12)
+    except Exception:                               # noqa: BLE001
+        return None
+    if proc.returncode != 0:
+        return None
+
+    text = proc.stdout or ""
+    match = re.search(r"mCurrentRotation=ROTATION_(\d+)", text)
+    if match:
+        return int(match.group(1)) % 4
+    match = re.search(r"\bmRotation=(\d+)", text)
+    if match:
+        return int(match.group(1)) % 4
+    return None
+
+
+def screen_size(adb) -> tuple[int, int] | None:
+    """Ukuran layar SESUAI rotasi saat ini.
+
+    Inilah ruang koordinat yang dipakai `input tap`, jadi ini yang harus
+    dipakai untuk mengubah persentase jadi piksel.
+    """
+    size = physical_size(adb)
+    if size is None:
+        return None
+    rotation = current_rotation(adb)
+    if rotation in (1, 3):
+        return size[1], size[0]                     # mendatar: tukar sisi
     return size
 
 
 def is_landscape(adb) -> bool:
     """Apakah layar sedang mendatar (game MOBA biasanya begitu)?"""
+    return current_rotation(adb) in (1, 3)
+
+
+def screen_awake(adb) -> bool | None:
+    """False kalau layar mati/HP terkunci - tap tidak akan terlihat efeknya."""
     try:
-        proc = adb.run(["shell", "settings", "get", "system", "user_rotation"], timeout=8)
-        value = (proc.stdout or "").strip()
-        return value in ("1", "3")
+        proc = adb.run(["shell", "dumpsys", "power"], timeout=10)
     except Exception:                               # noqa: BLE001
-        return False
+        return None
+    if proc.returncode != 0:
+        return None
+    match = re.search(r"mWakefulness=(\w+)", proc.stdout or "")
+    if not match:
+        return None
+    return match.group(1).lower() == "awake"
 
 
 def resolve_point(adb, profile: dict, button: str) -> tuple[int, int] | str:
@@ -96,12 +143,19 @@ def resolve_point(adb, profile: dict, button: str) -> tuple[int, int] | str:
         return "Tidak bisa membaca ukuran layar device (adb shell wm size gagal)"
 
     width, height = size
-    # Profil dikalibrasi pada orientasi tertentu. Kalau layar sekarang
-    # berbeda orientasi, tukar sisi supaya persentase tetap masuk akal.
-    calibrated_landscape = bool(profile.get("landscape", True))
     now_landscape = width > height
+    calibrated_landscape = bool(profile.get("landscape", True))
+
+    # Orientasi harus SAMA dengan saat kalibrasi. Kalau berbeda, menukar
+    # sisi begitu saja menghasilkan titik yang salah - lebih baik bilang
+    # terus terang daripada menekan tempat acak.
     if calibrated_landscape != now_landscape:
-        width, height = height, width
+        butuh = "mendatar (landscape)" if calibrated_landscape else "tegak (portrait)"
+        sekarang = "mendatar" if now_landscape else "tegak"
+        return (
+            f"Profil dikalibrasi saat layar {butuh}, tapi HP sekarang {sekarang}. "
+            f"Putar HP ke posisi yang sama, atau kalibrasi ulang di tab Game."
+        )
 
     return int(px * width), int(py * height)
 

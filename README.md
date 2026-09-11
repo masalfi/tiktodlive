@@ -72,8 +72,25 @@ Mau tanpa kabel? `adb tcpip 5555` lalu `adb connect <IP-HP>:5555`.
 
 ## Pemakaian
 
+### Tab Mulai
+
+Tab pertama yang kamu lihat: daftar langkah persiapan dengan status
+masing-masing, dan tombol **Buka** yang langsung melompat ke tab terkait.
+
+| | Langkah |
+|---|---|
+| 1 | Sambungkan HP Android |
+| 2 | Siapkan scrcpy (opsional) |
+| 3 | Isi akun TikTok |
+| 4 | Buat aturan gift |
+| 5 | Pasang overlay di OBS (opsional) |
+| 6 | Kalibrasi tombol game (opsional) |
+
+Di atasnya ada ringkasan: **Siap dipakai** kalau semua langkah wajib
+beres, atau daftar apa yang masih kurang.
+
 ### Tab Koneksi
-Isi username TikTok (tanpa `@`) → **Connect**. Status berubah **LIVE** kalau
+Isi nama akun TikTok → **Connect**. Kamu boleh menempel link profilnya langsung (`https://tiktok.com/@nama/live`) — aplikasi merapikannya sendiri. Status berubah **LIVE** kalau
 akun sedang siaran. Akun harus benar-benar sedang live.
 
 *Sign API key* opsional — hanya untuk menaikkan rate limit server signature
@@ -189,6 +206,15 @@ berdasarkan posisi yang **kamu kalibrasi sendiri**.
 
 Tips: nyalakan **Tampilkan sentuhan** di tab scrcpy supaya kamu bisa melihat
 persis di mana tap mendarat.
+
+> **Orientasi harus sama.** Profil yang dikalibrasi saat layar mendatar hanya
+> berlaku saat layar mendatar. Tab Game menampilkan orientasi HP saat ini dan
+> memberi peringatan kalau tidak cocok — kalau diabaikan, semua tap akan
+> mendarat di tempat yang salah.
+>
+> Ini penting karena `adb shell wm size` **selalu** melaporkan ukuran fisik
+> (mis. 1080x2280) walau HP sedang mendatar. Aplikasi membaca rotasi
+> sebenarnya lewat `dumpsys`, bukan dari `wm size`.
 
 #### Aksi game
 
@@ -415,7 +441,8 @@ Isi `config/rules.yaml` bawaan sudah berisi 5 contoh rule siap pakai.
 | Aksi bilang "belum ada overlay yang membukanya" | Browser Source untuk channel itu belum dibuka di OBS, atau URL-nya salah |
 | Audio overlay tidak bunyi | Cek overlay terbuka di OBS (tab Overlay menampilkan jumlahnya). Di browser biasa, klik halaman sekali untuk membuka blokir autoplay |
 | File audio ditolak | Format harus mp3/wav/ogg/m4a/flac/opus, maks 64 MB |
-| Tap game meleset | Kalibrasi ulang di tab Game; pastikan HUD layout & resolusi tidak berubah |
+| Tap game meleset | Cek indikator orientasi di tab Game — HP harus dalam posisi yang sama seperti saat kalibrasi |
+| Tes tekan tidak terasa | Layar HP mungkin terkunci; buka kuncinya dulu |
 | Tap game tidak bereaksi sama sekali | Game itu memblokir input adb — tidak bisa diatasi dari aplikasi |
 | Dropdown gift kosong | Klik **Segarkan** di tab Gift; butuh internet. Nama gift tetap bisa diketik manual |
 

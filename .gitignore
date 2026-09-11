@@ -6,3 +6,6 @@ config/settings.yaml
 config/gifts.json
 config/gift_icons/
 vendor/
+*.bak
+*.kalibrasi-lama
+config/*.tmp

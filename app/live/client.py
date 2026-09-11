@@ -22,6 +22,30 @@ from app.live.normalizer import (
 log = logging.getLogger(__name__)
 
 # Status koneksi yang dipancarkan ke GUI
+def clean_username(raw: str) -> str:
+    """Rapikan apa pun yang ditempel user jadi username murni.
+
+    Orang sering menempel URL profil atau menyalin "@nama/live" dari
+    aplikasi TikTok. Tanpa dibersihkan, koneksi gagal dengan pesan
+    "user tidak live" yang menyesatkan.
+    """
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+
+    # Buang bagian URL kalau yang ditempel adalah tautan.
+    for marker in ("tiktok.com/", "tiktok.com@"):
+        if marker in text:
+            text = text.split(marker, 1)[1]
+            break
+
+    text = text.lstrip("@/")
+    # Sisa jalur seperti "nama/live" atau query "?lang=id".
+    text = text.split("?", 1)[0].split("#", 1)[0]
+    text = text.split("/", 1)[0]
+    return text.strip()
+
+
 STATE_DISCONNECTED = "disconnected"
 STATE_CONNECTING = "connecting"
 STATE_LIVE = "live"
@@ -38,7 +62,7 @@ class TikTokWorker(QThread):
 
     def __init__(self, username: str, sign_api_key: str = "", auto_reconnect: bool = True) -> None:
         super().__init__()
-        self.username = username.strip().lstrip("@")
+        self.username = clean_username(username)
         self.sign_api_key = sign_api_key.strip()
         self.auto_reconnect = auto_reconnect
 

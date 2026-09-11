@@ -5,7 +5,15 @@ from types import SimpleNamespace
 import pytest
 
 from app.actions.base import HANDLERS, coerce_params, get_spec
-from app.actions.game import DIRECTIONS, register_game_actions, resolve_point, screen_size
+from app.actions.game import (
+    DIRECTIONS,
+    current_rotation,
+    physical_size,
+    register_game_actions,
+    resolve_point,
+    screen_awake,
+    screen_size,
+)
 
 register_game_actions()
 
@@ -21,11 +29,19 @@ PROFILE = {
 
 
 class FakeAdb:
-    """adb tiruan yang melaporkan ukuran layar dan mencatat perintah."""
+    """adb tiruan.
 
-    def __init__(self, width=2280, height=1080, fail=False):
+    Meniru perilaku Android yang penting: `wm size` SELALU melaporkan
+    ukuran fisik (tegak), sedangkan rotasi sebenarnya hanya terbaca dari
+    `dumpsys window`.
+    """
+
+    def __init__(self, width=1080, height=2280, rotation=1, fail=False, awake=True):
+        # width/height = ukuran FISIK (seperti yang dilaporkan wm size)
         self.width, self.height = width, height
+        self.rotation = rotation          # 0/2 = tegak, 1/3 = mendatar
         self.fail = fail
+        self.awake = awake
         self.commands: list[list[str]] = []
         self.game_profile = PROFILE
 
@@ -37,6 +53,15 @@ class FakeAdb:
             return SimpleNamespace(
                 returncode=0, stdout=f"Physical size: {self.width}x{self.height}\n", stderr=""
             )
+        if args[:3] == ["shell", "dumpsys", "window"]:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=f"  mRotation=0 mCurrentRotation=ROTATION_{self.rotation}\n",
+                stderr="",
+            )
+        if args[:3] == ["shell", "dumpsys", "power"]:
+            state = "Awake" if self.awake else "Dozing"
+            return SimpleNamespace(returncode=0, stdout=f"mWakefulness={state}\n", stderr="")
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     def input_commands(self):
@@ -49,8 +74,27 @@ def run(adb, action_type, params):
 
 # ------------------------------------------------------------ ukuran layar
 
-def test_screen_size_parsed():
-    assert screen_size(FakeAdb(1080, 2280)) == (1080, 2280)
+def test_physical_size_parsed():
+    assert physical_size(FakeAdb(1080, 2280)) == (1080, 2280)
+
+
+@pytest.mark.parametrize("rotation,expected", [
+    (0, (1080, 2280)), (2, (1080, 2280)),        # tegak
+    (1, (2280, 1080)), (3, (2280, 1080)),        # mendatar
+])
+def test_screen_size_follows_rotation(rotation, expected):
+    """`wm size` selalu bilang 1080x2280; rotasi yang menentukan ruang
+    koordinat yang dipakai `input tap`."""
+    assert screen_size(FakeAdb(1080, 2280, rotation=rotation)) == expected
+
+
+def test_rotation_read_from_dumpsys():
+    assert current_rotation(FakeAdb(rotation=3)) == 3
+
+
+def test_screen_awake_detected():
+    assert screen_awake(FakeAdb(awake=True)) is True
+    assert screen_awake(FakeAdb(awake=False)) is False
 
 
 def test_screen_size_none_on_failure():
@@ -70,33 +114,43 @@ def test_override_size_wins():
                 )
             return super().run(args, timeout, binary)
 
-    assert screen_size(Override()) == (1080, 2280)
+    # rotation=0 (tegak), jadi hasilnya apa adanya
+    assert screen_size(Override(rotation=0)) == (1080, 2280)
 
 
 # --------------------------------------------------------------- koordinat
 
 def test_percentage_becomes_pixels():
     """0.865 x 2280 = 1972 - koordinat ikut resolusi, bukan angka tetap."""
-    assert resolve_point(FakeAdb(2280, 1080), PROFILE, "ultimate") == (1972, 486)
+    assert resolve_point(FakeAdb(1080, 2280, rotation=1), PROFILE, "ultimate") == (1972, 486)
 
 
-def test_same_result_regardless_of_reported_orientation():
-    """Pixel 4 melaporkan 1080x2280 walau game sedang landscape.
+def test_landscape_profile_uses_rotated_size():
+    """Pixel 4: fisik 1080x2280, tapi saat mendatar ruang koordinatnya
+    2280x1080. Inilah yang harus dipakai."""
+    assert resolve_point(FakeAdb(1080, 2280, rotation=1), PROFILE, "ultimate") == (1972, 486)
 
-    Profil yang dikalibrasi landscape harus tetap menghasilkan titik yang
-    sama, kalau tidak semua tap akan meleset saat game dibuka.
-    """
-    portrait = resolve_point(FakeAdb(1080, 2280), PROFILE, "ultimate")
-    landscape = resolve_point(FakeAdb(2280, 1080), PROFILE, "ultimate")
-    assert portrait == landscape
+
+def test_refuses_when_orientation_differs():
+    """Menukar sisi diam-diam menghasilkan titik yang salah. Lebih baik
+    memberi tahu daripada menekan tempat acak - inilah bug yang membuat
+    'Tes tekan' seolah berhasil padahal tidak menekan apa pun."""
+    message = resolve_point(FakeAdb(1080, 2280, rotation=0), PROFILE, "ultimate")
+    assert isinstance(message, str)
+    assert "mendatar" in message and "tegak" in message
+
+
+def test_portrait_profile_works_in_portrait():
+    portrait_profile = {"landscape": False, "buttons": {"x": {"x": 0.5, "y": 0.5}}}
+    assert resolve_point(FakeAdb(1080, 2280, rotation=0), portrait_profile, "x") == (540, 1140)
 
 
 def test_different_resolution_scales():
     """HP lain dengan resolusi lain harus tetap menekan tombol yang sama."""
-    pixel4 = resolve_point(FakeAdb(2280, 1080), PROFILE, "ultimate")
-    fullhd = resolve_point(FakeAdb(1920, 1080), PROFILE, "ultimate")
-    assert pixel4 != fullhd
-    assert fullhd == (int(0.865 * 1920), int(0.450 * 1080))
+    pixel4 = resolve_point(FakeAdb(1080, 2280, rotation=1), PROFILE, "ultimate")
+    other = resolve_point(FakeAdb(1080, 1920, rotation=1), PROFILE, "ultimate")
+    assert pixel4 != other
+    assert other == (int(0.865 * 1920), int(0.450 * 1080))
 
 
 def test_unknown_button_lists_available():
@@ -177,7 +231,7 @@ def test_unknown_direction_rejected():
 
 def test_drag_stays_inside_screen():
     """Jarak besar tidak boleh menghasilkan koordinat di luar layar."""
-    adb = FakeAdb(2280, 1080)
+    adb = FakeAdb(1080, 2280, rotation=1)
     run(adb, "game.aim_skill", {"button": "ultimate", "direction": "kanan", "distance": 0.5})
     cmd = adb.input_commands()[-1]
     assert 0 < int(cmd[5]) < 2280

@@ -76,6 +76,13 @@ class ScreenView(QLabel):
         self.update()
         return True
 
+    def image_size(self):
+        """Ukuran screenshot. Ini mencerminkan rotasi NYATA layar HP,
+        berbeda dengan `wm size` yang selalu melaporkan ukuran fisik."""
+        if self._pixmap is None or self._pixmap.isNull():
+            return None
+        return self._pixmap.width(), self._pixmap.height()
+
     def set_markers(self, markers: dict[str, tuple[float, float]], highlight: str = "") -> None:
         self._markers = markers
         self._highlight = highlight
@@ -154,6 +161,7 @@ class GamePanel(QWidget):
         root.setContentsMargins(10, 10, 10, 10)
 
         root.addWidget(self._build_top())
+        root.addWidget(self._build_guide())
 
         body = QHBoxLayout()
         body.addWidget(self._build_buttons(), 0)
@@ -189,6 +197,24 @@ class GamePanel(QWidget):
 
         self.status_label = QLabel("-")
         layout.addWidget(self.status_label)
+        return box
+
+    def _build_guide(self) -> QWidget:
+        box = QGroupBox("Cara kalibrasi")
+        layout = QVBoxLayout(box)
+        layout.setSpacing(4)
+
+        steps = QLabel(
+            "1. Buka game di HP sampai MASUK PERTANDINGAN (layar mendatar)\n"
+            "2. Klik Ambil Screenshot  →  3. Pilih tombol di kiri  →  "
+            "4. Klik posisinya di gambar  →  5. Tes tekan  →  6. Simpan"
+        )
+        steps.setWordWrap(True)
+        steps.setProperty("class", "hint")
+        layout.addWidget(steps)
+
+        self.orientation_label = QLabel("-")
+        layout.addWidget(self.orientation_label)
         return box
 
     # ------------------------------------------------------------ tombol
@@ -267,7 +293,53 @@ class GamePanel(QWidget):
             self.status_label.setStyleSheet(f"color:{WARN};")
 
         self._refresh_markers()
+        self.refresh_orientation()
         self.profile_changed.emit()
+
+    def refresh_orientation(self) -> None:
+        """Tunjukkan orientasi HP sekarang vs orientasi profil.
+
+        Ketidakcocokan di sini adalah penyebab tersering tap meleset -
+        `wm size` tidak menunjukkannya, jadi harus ditampilkan terang.
+        """
+        if not hasattr(self, "orientation_label"):
+            return
+        if not self.adb.available:
+            self.orientation_label.setText("adb belum tersedia.")
+            self.orientation_label.setStyleSheet(f"color:{TEXT_DIM};")
+            return
+
+        from app.actions.game import current_rotation, screen_awake
+
+        rotation = current_rotation(self.adb)
+        if rotation is None:
+            self.orientation_label.setText("HP tidak terbaca — cek koneksi di tab Devices.")
+            self.orientation_label.setStyleSheet(f"color:{DANGER};")
+            return
+
+        now_landscape = rotation in (1, 3)
+        want_landscape = bool(self.current_profile().get("landscape", True))
+        now_text = "mendatar" if now_landscape else "tegak"
+        want_text = "mendatar" if want_landscape else "tegak"
+
+        if screen_awake(self.adb) is False:
+            self.orientation_label.setText(
+                "Layar HP mati / terkunci — buka kuncinya dulu."
+            )
+            self.orientation_label.setStyleSheet(f"color:{WARN};")
+        elif now_landscape == want_landscape:
+            self.orientation_label.setText(f"HP sekarang {now_text} — cocok dengan profil.")
+            self.orientation_label.setStyleSheet(f"color:{OK};")
+        else:
+            self.orientation_label.setText(
+                f"HP sekarang {now_text}, profil ini untuk layar {want_text}. "
+                f"Putar HP atau buka gamenya dulu."
+            )
+            self.orientation_label.setStyleSheet(f"color:{WARN};")
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self.refresh_orientation()
 
     def _refresh_markers(self) -> None:
         buttons = self.current_profile().get("buttons") or {}
@@ -304,7 +376,21 @@ class GamePanel(QWidget):
             self._report(False, "Screenshot tidak bisa dibaca.")
             return
         self._refresh_markers()
-        self._report(True, "Screenshot diambil. Pilih tombol di kiri, lalu klik posisinya.")
+
+        shot = self.view.image_size()
+        orientation = "mendatar" if shot and shot[0] > shot[1] else "tegak"
+        notes = [f"Screenshot {shot[0]}x{shot[1]} ({orientation})." if shot else "Screenshot diambil."]
+
+        # Game MOBA dimainkan mendatar; kalibrasi dari layar tegak hampir
+        # pasti salah, jadi peringatkan sebelum user menghabiskan waktu.
+        if shot and shot[0] <= shot[1]:
+            notes.append(
+                "HP sedang TEGAK - kalau ini game mendatar, buka gamenya dulu "
+                "sampai masuk pertandingan, baru ambil screenshot lagi."
+            )
+        notes.append("Pilih tombol di kiri, lalu klik posisinya.")
+        self._report(True, " ".join(notes))
+        self.refresh_orientation()
 
     def _open_game(self) -> None:
         package = str(self.current_profile().get("package") or "").strip()
@@ -332,11 +418,14 @@ class GamePanel(QWidget):
         profile = self.current_profile()
         profile.setdefault("buttons", {})[name] = {"x": px, "y": py}
         profile["calibrated"] = True
-        # Orientasi ikut dicatat: profil yang dikalibrasi mendatar tidak
-        # boleh dipakai apa adanya saat layar tegak.
-        size = self._screen_size()
-        if size:
-            profile["landscape"] = size[0] > size[1]
+        # Orientasi diambil dari SCREENSHOT, bukan `wm size`. `wm size`
+        # selalu melaporkan ukuran fisik (mis. 1080x2280) walau HP sedang
+        # mendatar, sehingga profil bisa tersimpan dengan orientasi salah
+        # dan semua tap meleset.
+        shot = self.view.image_size()
+        if shot:
+            profile["landscape"] = shot[0] > shot[1]
+            profile["calib_size"] = f"{shot[0]}x{shot[1]}"
 
         self._refresh_markers()
         self._report(True, f"'{name}' disetel ke {px:.3f}, {py:.3f} — klik Simpan untuk menyimpan.")
@@ -352,6 +441,15 @@ class GamePanel(QWidget):
             self._report(False, "Pilih tombol dulu.")
             return
         from app.actions.base import HANDLERS, coerce_params
+        from app.actions.game import screen_awake
+
+        # Layar mati / HP terkunci = tap terkirim tapi tidak ada efeknya.
+        # Tanpa peringatan ini, aksinya terlihat "berhasil" padahal tidak.
+        if screen_awake(self.adb) is False:
+            self._report(False,
+                         "Layar HP mati atau terkunci - buka kuncinya dulu, "
+                         "kalau tidak tap tidak akan terlihat efeknya.")
+            return
 
         # Pakai profil yang sedang diedit, bukan yang tersimpan di disk.
         self.adb.game_profile = self.current_profile()

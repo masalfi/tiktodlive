@@ -19,7 +19,13 @@ from PySide6.QtWidgets import (
 
 from PySide6.QtCore import QThread
 
-from app.live.client import STATE_CONNECTING, STATE_DISCONNECTED, STATE_ERROR, STATE_LIVE
+from app.live.client import (
+    STATE_CONNECTING,
+    STATE_DISCONNECTED,
+    STATE_ERROR,
+    STATE_LIVE,
+    clean_username,
+)
 from app.live.signcheck import fetch_rate_limits, format_rate_limits, is_exhausted
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM
 
@@ -71,8 +77,11 @@ class ConnectPanel(QWidget):
 
         row = QHBoxLayout()
         self.username_edit = QLineEdit(settings["tiktok"]["username"])
-        self.username_edit.setPlaceholderText("username tanpa @, mis. isaackogz")
+        self.username_edit.setPlaceholderText("nama akun TikTok \u2014 boleh tempel link profilnya")
         self.username_edit.returnPressed.connect(self._toggle)
+        # Rapikan begitu user selesai mengetik, supaya dia melihat sendiri
+        # bentuk yang benar-benar dipakai.
+        self.username_edit.editingFinished.connect(self._tidy_username)
         row.addWidget(self.username_edit, 1)
 
         self.connect_button = QPushButton("Connect")
@@ -157,6 +166,11 @@ class ConnectPanel(QWidget):
 
     # ------------------------------------------------------------------ API
 
+    def _tidy_username(self) -> None:
+        cleaned = clean_username(self.username_edit.text())
+        if cleaned != self.username_edit.text():
+            self.username_edit.setText(cleaned)
+
     def _emit_settings_changed(self, *_args) -> None:
         """Penampung untuk sinyal Qt yang membawa argumen (int/bool).
 
@@ -170,7 +184,7 @@ class ConnectPanel(QWidget):
         if self._connected:
             self.disconnect_requested.emit()
         else:
-            self.connect_requested.emit(self.username_edit.text().strip().lstrip("@"))
+            self.connect_requested.emit(clean_username(self.username_edit.text()))
 
     def set_connecting(self) -> None:
         self.set_state(STATE_CONNECTING, "Menyambung...")
@@ -217,7 +231,7 @@ class ConnectPanel(QWidget):
         super().closeEvent(event)
 
     def apply_to_settings(self, settings: dict) -> None:
-        settings["tiktok"]["username"] = self.username_edit.text().strip().lstrip("@")
+        settings["tiktok"]["username"] = clean_username(self.username_edit.text())
         settings["tiktok"]["sign_api_key"] = self.sign_key_edit.text().strip()
         settings["tiktok"]["auto_reconnect"] = self.reconnect_check.isChecked()
         settings["tiktok"]["backend"] = self.backend_combo.currentData()

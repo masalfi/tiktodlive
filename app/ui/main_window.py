@@ -36,6 +36,7 @@ from app.ui.panel_connect import ConnectPanel
 from app.ui.gift_icons import ICONS
 from app.ui.panel_devices import DevicesPanel
 from app.ui.panel_game import GamePanel
+from app.ui.panel_home import HomePanel
 from app.ui.panel_gifts import GiftsPanel
 from app.scrcpy.watcher import OFFLINE, ONLINE, RECONNECTING, DeviceWatcher
 from app.ui.panel_scrcpy import ScrcpyPanel
@@ -143,6 +144,11 @@ class MainWindow(QMainWindow):
         self.host.scrcpy_options = self.scrcpy_panel.options
         self.log_panel = LogPanel()
 
+        # Dibuat setelah panel lain karena memeriksa statusnya.
+        self.home_panel = HomePanel(self)
+        self.home_panel.open_tab.connect(self._open_tab_by_name)
+
+        self.tabs.addTab(self.home_panel, "Mulai")
         self.tabs.addTab(self.connect_panel, "Koneksi")
         self.tabs.addTab(self.rules_panel, "Rules")
         self.tabs.addTab(self.devices_panel, "Devices")
@@ -180,6 +186,13 @@ class MainWindow(QMainWindow):
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
         self._timer.start(500)
+
+    def _open_tab_by_name(self, name: str) -> None:
+        """Dipakai tombol di tab Mulai untuk melompat ke tab terkait."""
+        for index in range(self.tabs.count()):
+            if self.tabs.tabText(index) == name:
+                self.tabs.setCurrentIndex(index)
+                return
 
     def _wire(self) -> None:
         self.connect_panel.connect_requested.connect(self._start_live)
@@ -491,6 +504,8 @@ class MainWindow(QMainWindow):
 
     def _tick(self) -> None:
         self.queue_label.setText(f"Antrian: {self.queue.pending()}")
+        if self.tabs.currentWidget() is getattr(self, "home_panel", None):
+            self.home_panel.refresh()
         if self.overlay.running:
             self.overlay_label.setText(f"Overlay: {self.overlay.client_count} klien")
             if self.tabs.currentWidget() is self.overlay_panel:

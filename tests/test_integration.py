@@ -31,6 +31,7 @@ def window(qapp):
 
 # ---------------------------------------------------- adb bawaan scrcpy
 
+@pytest.mark.real_adb
 def test_vendor_adb_preferred_over_path(tmp_path, monkeypatch):
     """adb bawaan scrcpy harus menang dari PATH, supaya versinya cocok
     dengan scrcpy yang dipakai."""
@@ -48,6 +49,7 @@ def test_vendor_adb_preferred_over_path(tmp_path, monkeypatch):
     assert cfg.find_adb() == str(bundled)
 
 
+@pytest.mark.real_adb
 def test_falls_back_to_path_without_vendor(tmp_path, monkeypatch):
     import app.config as cfg
 
@@ -56,6 +58,7 @@ def test_falls_back_to_path_without_vendor(tmp_path, monkeypatch):
     assert cfg.find_adb() == "/usr/bin/adb"
 
 
+@pytest.mark.real_adb
 def test_configured_path_wins_over_vendor(tmp_path, monkeypatch):
     """Kalau user mengisi path manual, itu yang dipakai."""
     import app.config as cfg
@@ -72,6 +75,7 @@ def test_configured_path_wins_over_vendor(tmp_path, monkeypatch):
     assert cfg.find_adb(str(manual)) == str(manual)
 
 
+@pytest.mark.real_adb
 def test_vendor_adb_none_when_missing(tmp_path, monkeypatch):
     import app.config as cfg
 
