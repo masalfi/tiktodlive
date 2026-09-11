@@ -41,7 +41,7 @@ rules:
   - type: overlay.confetti
     params:
       count: 60
-      channel: alert
+      channel: efek
     delay_after: 0.0
   cooldown_sec: 1.0
   max_per_hour: null
@@ -76,7 +76,7 @@ rules:
   max_per_hour: null
   require_confirm: false
 - id: folw0001
-  name: Follow baru -> overlay + suara
+  name: Follow baru -> ucapan di overlay
   enabled: true
   event_kind: follow
   conditions: {}
@@ -167,6 +167,7 @@ rules:
       subtitle: HP akan reboot...
       style: danger
       duration_ms: 6000
+      channel: alert
     delay_after: 3.0
   - type: adb.reboot
     params:
