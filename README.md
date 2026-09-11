@@ -393,7 +393,23 @@ opus). Aplikasi menyajikannya lewat server lokal.
 | **Layar bergetar** | Overlay berguncang sesaat |
 | **Kilat warna** | Layar berkedip dengan warna pilihan |
 | **Teks melayang** | Teks besar naik lalu memudar — bisa pakai `{user}`, `{gift}` |
-| **Hujan emoji** | Emoji berjatuhan dari atas layar |
+| **Hujan emoji / gambar / ikon gift** | Benda berjatuhan dari atas layar — lihat di bawah |
+
+#### Hujan: tiga sumber
+
+| Sumber | Yang jatuh |
+|---|---|
+| **Emoji** | Emoji yang kamu ketik, mis. 🌹 |
+| **Ikon gift yang masuk** | Ikon gift yang memicu rule itu — gift Rose menghasilkan hujan Rose, gift Lion menghasilkan hujan Lion. **Otomatis, tanpa memilih gambar** |
+| **Gambar dari komputer** | File png/jpg/gif/webp pilihanmu |
+
+Ukurannya bisa diatur (16–200 px) dan tiap benda punya ukuran sedikit
+berbeda supaya terasa berkedalaman.
+
+Untuk sumber **ikon gift**, biarkan kolom *ID gift* berisi `{gift_id}` —
+itu terisi otomatis dari gift yang masuk. Ikonnya diambil dari katalog
+gift; kalau belum tersimpan, diunduh saat itu juga. Kalau rule dipicu
+komentar (bukan gift), efeknya otomatis kembali memakai emoji.
 
 Semua efek bisa digabung dalam satu rule. Contoh di `config/rules.yaml`:
 gift ≥500 koin → hujan mawar + layar bergetar + teks nama pengirim.

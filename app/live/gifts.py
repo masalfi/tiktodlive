@@ -24,6 +24,9 @@ from app.config import CONFIG_DIR
 log = logging.getLogger(__name__)
 
 CACHE_PATH = CONFIG_DIR / "gifts.json"
+# Folder cache gambar ikon gift. Dipakai bersama oleh tampilan (tab Gift)
+# dan aksi overlay "hujan ikon gift".
+ICON_DIR = CONFIG_DIR / "gift_icons"
 # Katalog jarang berubah; segarkan otomatis kalau cache lebih tua dari ini.
 CACHE_MAX_AGE_SEC = 7 * 24 * 3600
 
@@ -239,6 +242,40 @@ def fetch_gift_list_sync(timeout: float = 30.0) -> list[dict[str, Any]]:
         return await asyncio.wait_for(fetch_gift_list(), timeout=timeout)
 
     return asyncio.run(runner())
+
+
+def icon_path(gift_id: int) -> Path:
+    """Lokasi file ikon sebuah gift di cache."""
+    return ICON_DIR / f"{gift_id}.img"
+
+
+def ensure_icon(gift_id: int, timeout: float = 15.0) -> Path | None:
+    """Ambil file ikon gift, unduh dulu kalau belum ada.
+
+    Dipakai aksi overlay supaya hujan ikon tetap jalan untuk gift yang
+    belum pernah tampil di tab Gift. Kembalikan None kalau gagal.
+    """
+    path = icon_path(gift_id)
+    if path.is_file() and path.stat().st_size > 0:
+        return path
+
+    gift = CATALOG.find_by_id(gift_id)
+    if gift is None or not gift.icon_url:
+        return None
+
+    try:
+        import httpx
+
+        with httpx.Client(timeout=timeout, follow_redirects=True) as client:
+            response = client.get(gift.icon_url)
+        if response.status_code != 200 or not response.content:
+            return None
+        ICON_DIR.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(response.content)
+    except Exception as exc:                        # noqa: BLE001
+        log.warning("Gagal mengunduh ikon gift %s: %s", gift_id, exc)
+        return None
+    return path
 
 
 # Katalog bersama satu aplikasi.

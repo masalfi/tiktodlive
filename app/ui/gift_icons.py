@@ -13,11 +13,10 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QThread, Signal
 from PySide6.QtGui import QIcon, QPixmap
 
-from app.config import CONFIG_DIR
+from app.live.gifts import ICON_DIR
 
 log = logging.getLogger(__name__)
 
-ICON_DIR = CONFIG_DIR / "gift_icons"
 ICON_SIZE = 28
 
 

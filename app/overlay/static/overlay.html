@@ -89,9 +89,15 @@
   }
 
   .rain-item {
-    position: absolute; top: -60px;
+    position: absolute; top: -80px;
     font-size: 40px; line-height: 1;
     animation: raindown linear forwards;
+  }
+  .rain-item img {
+    display: block;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,.45));
   }
   @keyframes raindown {
     to { transform: translateY(115vh) rotate(var(--spin, 180deg)); }
@@ -343,22 +349,41 @@
     setTimeout(function () { el.remove(); }, 2600);
   }
 
-  function doRain(emoji, count) {
-    var symbol = emoji || '\u{1F381}';
-    var total = Math.min(80, Math.max(1, count || 20));
+  function doRain(data) {
+    // Sumber bisa emoji (teks) atau gambar (ikon gift / file pilihan user).
+    var image = data.image || '';
+    var symbol = data.emoji || '\u{1F381}';
+    var total = Math.min(80, Math.max(1, Number(data.count) || 20));
+    var baseSize = Math.min(200, Math.max(16, Number(data.size) || 44));
+
     for (var i = 0; i < total; i++) {
       (function (index) {
         setTimeout(function () {
           var el = document.createElement('div');
           el.className = 'rain-item';
-          el.textContent = symbol;
+
+          // Ukuran bervariasi supaya terasa ada kedalaman.
+          var size = Math.round(baseSize * (0.7 + Math.random() * 0.7));
           el.style.left = (Math.random() * 96) + '%';
           var dur = 2.5 + Math.random() * 2;
           el.style.animationDuration = dur + 's';
           el.style.setProperty('--spin', ((Math.random() - 0.5) * 720) + 'deg');
-          el.style.fontSize = (28 + Math.random() * 28) + 'px';
+
+          if (image) {
+            el.style.width = size + 'px';
+            el.style.height = size + 'px';
+            var img = document.createElement('img');
+            img.src = image;
+            // Gambar gagal dimuat tidak boleh meninggalkan kotak kosong.
+            img.onerror = function () { el.remove(); };
+            el.appendChild(img);
+          } else {
+            el.style.fontSize = size + 'px';
+            el.textContent = symbol;
+          }
+
           fxEl.appendChild(el);
-          setTimeout(function () { el.remove(); }, dur * 1000 + 200);
+          setTimeout(function () { el.remove(); }, dur * 1000 + 300);
         }, index * 60);
       })(i);
     }
@@ -379,7 +404,7 @@
         doFloatText(data.text, data.color);
         break;
       case 'rain':
-        doRain(data.emoji, Number(data.count) || 20);
+        doRain(data);
         break;
       default:
         break;

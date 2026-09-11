@@ -42,6 +42,34 @@ class MediaError(ValueError):
     """File tidak bisa dipakai - pesannya layak ditampilkan ke user."""
 
 
+# Tanda pengenal di awal file, untuk berkas tanpa ekstensi yang jelas.
+# Cache ikon gift misalnya disimpan sebagai ".img" apa pun formatnya.
+_MAGIC = [
+    (b"\x89PNG\r\n\x1a\n", "image", "image/png"),
+    (b"\xff\xd8\xff", "image", "image/jpeg"),
+    (b"GIF87a", "image", "image/gif"),
+    (b"GIF89a", "image", "image/gif"),
+    (b"BM", "image", "image/bmp"),
+]
+
+
+def sniff(path: Path) -> tuple[str, str]:
+    """Tebak (jenis, mime) dari isi file. ('', '') kalau tidak dikenali."""
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(16)
+    except OSError:
+        return "", ""
+
+    for signature, kind, mime in _MAGIC:
+        if head.startswith(signature):
+            return kind, mime
+    # WEBP: "RIFF" + 4 byte ukuran + "WEBP"
+    if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+        return "image", "image/webp"
+    return "", ""
+
+
 def kind_of(path: Path) -> str:
     """audio | image | video, atau '' kalau tidak didukung."""
     suffix = path.suffix.lower()
@@ -51,14 +79,22 @@ def kind_of(path: Path) -> str:
         return "image"
     if suffix in VIDEO_SUFFIXES:
         return "video"
-    return ""
+    # Ekstensi tidak dikenal - periksa isinya. Ini yang membuat ikon gift
+    # (disimpan sebagai .img) tetap bisa disajikan ke overlay.
+    return sniff(path)[0]
 
 
 def mime_of(path: Path) -> str:
     guessed, _ = mimetypes.guess_type(path.name)
     if guessed:
         return guessed
-    return _FALLBACK_MIME.get(path.suffix.lower(), "application/octet-stream")
+    fallback = _FALLBACK_MIME.get(path.suffix.lower())
+    if fallback:
+        return fallback
+    # Browser menolak memutar/menampilkan media dengan Content-Type salah,
+    # jadi untuk ekstensi tak dikenal tipe dibaca dari isi file.
+    sniffed = sniff(path)[1]
+    return sniffed or "application/octet-stream"
 
 
 class MediaRegistry:

@@ -18,6 +18,8 @@ def context_from_event(event: LiveEvent) -> dict[str, str]:
         "username": event.username,
         "nickname": event.nickname,
         "gift": event.gift_name or "",
+        # Dipakai efek "hujan ikon gift" untuk menemukan gambarnya.
+        "gift_id": str(event.gift_id or ""),
         "count": str(event.repeat_count),
         "coins": str(event.total_coins),
         "comment": event.comment or "",

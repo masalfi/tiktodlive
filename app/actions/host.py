@@ -252,6 +252,53 @@ def _h_overlay_music(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
                          str(p.get("channel") or ""))
 
 
+def _rain_image(host: HostExecutor, p: dict[str, Any], payload: dict, started: float):
+    """Hujan memakai file gambar pilihan user."""
+    from app.overlay.media import MediaError
+
+    raw = str(p.get("file") or "").strip()
+    if not raw:
+        return _fail("host.overlay_effect", started,
+                     "Sumber 'gambar' dipilih tapi file belum diisi")
+    try:
+        url, kind = host.overlay.media_url(raw)
+    except MediaError as exc:
+        return _fail("host.overlay_effect", started, str(exc))
+    if kind != "image":
+        return _fail("host.overlay_effect", started,
+                     f"File ini bertipe {kind}, bukan gambar")
+    payload["image"] = url
+    return None
+
+
+def _rain_gift_icon(host: HostExecutor, p: dict[str, Any], payload: dict, started: float):
+    """Hujan memakai ikon gift yang memicu rule.
+
+    gift_id datang dari placeholder {gift_id}; kalau rule dipicu event
+    non-gift (mis. komentar) nilainya kosong, jadi kembali ke emoji.
+    """
+    from app.live.gifts import ensure_icon
+    from app.overlay.media import MediaError
+
+    raw = str(p.get("gift_id") or "").strip()
+    if not raw.isdigit():
+        # Bukan event gift - jangan gagal, cukup pakai emoji cadangan.
+        payload["emoji"] = str(p.get("emoji") or "\U0001F381")
+        return None
+
+    path = ensure_icon(int(raw))
+    if path is None:
+        payload["emoji"] = str(p.get("emoji") or "\U0001F381")
+        return None
+
+    try:
+        url, _ = host.overlay.media_url(str(path))
+    except MediaError as exc:
+        return _fail("host.overlay_effect", started, str(exc))
+    payload["image"] = url
+    return None
+
+
 def _h_overlay_effect(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     """Efek visual: confetti, getar, kilat, teks melayang, hujan emoji."""
     started = time.time()
@@ -273,8 +320,22 @@ def _h_overlay_effect(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
         payload["text"] = str(p.get("text") or "")
         payload["color"] = str(p.get("color") or "")
     elif effect == "rain":
-        payload["emoji"] = str(p.get("emoji") or "\U0001F381")
         payload["count"] = max(1, min(80, int(p.get("count", 20))))
+        payload["size"] = max(16, min(200, int(p.get("size_px", 44))))
+
+        sumber = str(p.get("sumber") or "emoji").strip().lower()
+        if sumber == "gift":
+            # Pakai ikon gift yang memicu rule ini. gift_id diisi otomatis
+            # oleh placeholder {gift_id} saat rule dijalankan.
+            problem = _rain_gift_icon(host, p, payload, started)
+            if problem is not None:
+                return problem
+        elif sumber == "gambar":
+            problem = _rain_image(host, p, payload, started)
+            if problem is not None:
+                return problem
+        else:
+            payload["emoji"] = str(p.get("emoji") or "\U0001F381")
 
     return _send_overlay(host, "host.overlay_effect", started, payload,
                          str(p.get("channel") or ""))
@@ -369,7 +430,15 @@ def register_host_actions() -> None:
             ParamSpec("duration_ms", "Durasi (shake/flash)", "int", 500),
             ParamSpec("color", "Warna (flash/text)", "str", "#ffffff"),
             ParamSpec("text", "Teks (efek text)", "str", ""),
-            ParamSpec("emoji", "Emoji (efek rain)", "str", "\U0001F381"),
+            ParamSpec("sumber", "Hujan pakai apa", "choice", "emoji",
+                      choices=["emoji", "gift", "gambar"],
+                      help="gift = ikon gift yang memicu rule ini"),
+            ParamSpec("emoji", "Emoji (kalau sumber=emoji)", "str", "\U0001F381"),
+            ParamSpec("file", "File gambar (kalau sumber=gambar)", "file", "",
+                      help="png/jpg/gif/webp - path lengkap"),
+            ParamSpec("gift_id", "ID gift (isi otomatis)", "str", "{gift_id}",
+                      help="biarkan {gift_id} agar mengikuti gift yang masuk"),
+            ParamSpec("size_px", "Ukuran (px)", "int", 44),
             ParamSpec("channel", "Channel overlay", "str", "",
                       help="kosong = overlay utama; isi mis. 'alert' untuk Browser Source terpisah"),
         ], help="Placeholder {user}, {gift}, {count} bisa dipakai di teks"),

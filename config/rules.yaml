@@ -1,4 +1,23 @@
 rules:
+- id: hujangft
+  name: Gift apa pun -> hujan ikon gift-nya
+  enabled: true
+  event_kind: gift
+  conditions: {}
+  actions:
+  - type: host.overlay_effect
+    params:
+      effect: rain
+      sumber: gift
+      gift_id: '{gift_id}'
+      count: 25
+      size_px: 56
+      emoji: 🎁
+      channel: efek
+    delay_after: 0.0
+  cooldown_sec: 3.0
+  max_per_hour: null
+  require_confirm: false
 - id: rose0001
   name: Rose -> tap layar + confetti
   enabled: true
@@ -316,3 +335,22 @@ rules:
   cooldown_sec: 900.0
   max_per_hour: 2
   require_confirm: true
+- id: hujangbr
+  name: Komentar !hujan -> hujan gambar pilihan
+  enabled: false
+  event_kind: comment
+  conditions:
+    starts_with: '!hujan'
+  actions:
+  - type: host.overlay_effect
+    params:
+      effect: rain
+      sumber: gambar
+      file: ''
+      count: 30
+      size_px: 64
+      channel: efek
+    delay_after: 0.0
+  cooldown_sec: 15.0
+  max_per_hour: null
+  require_confirm: false

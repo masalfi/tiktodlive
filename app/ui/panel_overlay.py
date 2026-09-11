@@ -101,7 +101,7 @@ class OverlayPanel(QWidget):
         if content is None:
             return
         needed = content.layout().sizeHint().height()
-        if needed > content.minimumHeight():
+        if needed != content.minimumHeight():
             content.setMinimumHeight(needed)
 
     # ------------------------------------------------------------ status
@@ -360,6 +360,17 @@ class OverlayPanel(QWidget):
         spin.valueChanged.connect(self._save)
         return spin
 
+    def _browse_image(self) -> None:
+        start = (str(Path(self.image_edit.text()).parent)
+                 if self.image_edit.text().strip() else str(Path.home()))
+        path, _ = QFileDialog.getOpenFileName(
+            self, "Pilih gambar", start,
+            "Gambar (*.png *.jpg *.jpeg *.gif *.webp);;Semua file (*)",
+        )
+        if path:
+            self.image_edit.setText(path)
+            self._save()
+
     def _browse(self, target: QLineEdit) -> None:
         start = str(Path(target.text()).parent) if target.text().strip() else str(Path.home())
         path, _ = QFileDialog.getOpenFileName(self, "Pilih file audio", start, AUDIO_FILTER)
@@ -404,10 +415,40 @@ class OverlayPanel(QWidget):
         self.text_edit.editingFinished.connect(self._save)
         form.addRow("Teks:", self.text_edit)
 
+        self.source_combo = QComboBox()
+        for value, label in [("emoji", "Emoji"),
+                             ("gift", "Ikon gift yang masuk"),
+                             ("gambar", "Gambar dari komputer")]:
+            self.source_combo.addItem(label, value)
+        index = self.source_combo.findData(saved.get("effect_source", "emoji"))
+        self.source_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.source_combo.currentIndexChanged.connect(self._on_effect_changed)
+        form.addRow("Hujan pakai:", self.source_combo)
+
         self.emoji_edit = QLineEdit(saved.get("effect_emoji", "\U0001F381"))
         self.emoji_edit.setMaxLength(8)
         self.emoji_edit.editingFinished.connect(self._save)
         form.addRow("Emoji:", self.emoji_edit)
+
+        self.image_row = QWidget()
+        image_row = QHBoxLayout(self.image_row)
+        image_row.setContentsMargins(0, 0, 0, 0)
+        self.image_edit = QLineEdit(saved.get("effect_image", ""))
+        self.image_edit.setPlaceholderText("png/jpg/gif/webp dari mana saja di komputer")
+        self.image_edit.editingFinished.connect(self._save)
+        image_row.addWidget(self.image_edit, 1)
+        pick = QPushButton("Pilih...")
+        pick.clicked.connect(self._browse_image)
+        image_row.addWidget(pick)
+        form.addRow("Gambar:", self.image_row)
+
+        self.size_spin = QSpinBox()
+        self.size_spin.setRange(16, 200)
+        self.size_spin.setSingleStep(4)
+        self.size_spin.setSuffix(" px")
+        self.size_spin.setValue(int(saved.get("effect_size", 44)))
+        self.size_spin.valueChanged.connect(self._save)
+        form.addRow("Ukuran:", self.size_spin)
 
         row = QHBoxLayout()
         test = QPushButton("Uji efek")
@@ -426,23 +467,37 @@ class OverlayPanel(QWidget):
     def _on_effect_changed(self) -> None:
         """Sembunyikan field yang tidak relevan untuk efek terpilih."""
         effect = self.effect_combo.currentData()
+        source = self.source_combo.currentData() if hasattr(self, "source_combo") else "emoji"
         visible = {
             "confetti": {"count"},
             "shake": {"duration"},
             "flash": {"duration", "color"},
             "text": {"text", "color"},
-            "rain": {"count", "emoji"},
+            "rain": {"count", "source", "size"},
         }.get(effect, set())
+        if effect == "rain":
+            # Hanya tampilkan kolom milik sumber yang dipilih.
+            if source == "emoji":
+                visible.add("emoji")
+            elif source == "gambar":
+                visible.add("image")
 
         form = self.effect_combo.parentWidget().layout()
         for name, widget in (("count", self.count_spin), ("duration", self.duration_spin),
                              ("color", self.color_edit), ("text", self.text_edit),
-                             ("emoji", self.emoji_edit)):
+                             ("emoji", self.emoji_edit), ("source", self.source_combo),
+                             ("image", self.image_row),
+                             ("size", self.size_spin)):
             show = name in visible
             widget.setVisible(show)
             label = form.labelForField(widget)
             if label is not None:
                 label.setVisible(show)
+
+        # Menyembunyikan/menampilkan kolom mengubah tinggi yang dibutuhkan,
+        # jadi kunci tinggi area gulir harus dihitung ulang - kalau tidak
+        # kotak di bawahnya ikut terhimpit.
+        self._lock_content_height()
         self._save()
 
     # ----------------------------------------------------------- eksekusi
@@ -508,6 +563,9 @@ class OverlayPanel(QWidget):
             "color": self.color_edit.text(),
             "text": self.text_edit.text(),
             "emoji": self.emoji_edit.text(),
+            "sumber": self.source_combo.currentData(),
+            "file": self.image_edit.text(),
+            "size_px": self.size_spin.value(),
             "channel": self.current_channel(),
         })
 
@@ -524,7 +582,7 @@ class OverlayPanel(QWidget):
     def _save(self, *_args) -> None:
         # Sinyal bisa terpicu saat UI masih dibangun (combo channel dibuat
         # sebelum widget audio), jadi jangan simpan sebelum semuanya ada.
-        if not hasattr(self, "emoji_edit"):
+        if not hasattr(self, "size_spin"):
             return
 
         self.settings.setdefault("overlay", {})["test"] = {
@@ -540,6 +598,9 @@ class OverlayPanel(QWidget):
             "effect_color": self.color_edit.text(),
             "effect_text": self.text_edit.text(),
             "effect_emoji": self.emoji_edit.text(),
+            "effect_source": self.source_combo.currentData(),
+            "effect_image": self.image_edit.text(),
+            "effect_size": self.size_spin.value(),
             "channel": self.current_channel(),
         }
         self.settings_changed.emit()
