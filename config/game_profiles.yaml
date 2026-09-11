@@ -4,50 +4,46 @@ profiles:
     name: Mobile Legends
     package: com.mobile.legends
     landscape: true
-    calibrated: false
+    calibrated: true
     buttons:
-      attack:
-        x: 0.87
-        y: 0.75
-      skill1:
-        x: 0.735
-        y: 0.85
-      skill2:
-        x: 0.775
-        y: 0.62
-      skill3:
-        x: 0.865
-        y: 0.45
-      ultimate:
-        x: 0.865
-        y: 0.45
-      spell:
-        x: 0.66
-        y: 0.9
-      recall:
-        x: 0.6
-        y: 0.94
-      heal:
-        x: 0.955
-        y: 0.92
       joystick:
-        x: 0.16
-        y: 0.72
+        x: 0.182
+        y: 0.785
       minimap:
-        x: 0.075
-        y: 0.16
-      shop:
-        x: 0.965
-        y: 0.2
-      upgrade1:
-        x: 0.7
-        y: 0.76
-      upgrade2:
-        x: 0.735
-        y: 0.545
-      upgrade3:
-        x: 0.815
-        y: 0.385
+        x: 0.099
+        y: 0.134
+      attack:
+        x: 0.849
+        y: 0.858
+      burst:
+        x: 0.773
+        y: 0.691
+      aoe:
+        x: 0.86
+        y: 0.586
+      skill1:
+        x: 0.773
+        y: 0.691
+      skill2:
+        x: 0.86
+        y: 0.586
+      recall:
+        x: 0.508
+        y: 0.892
+      regen:
+        x: 0.575
+        y: 0.892
+      flicker:
+        x: 0.642
+        y: 0.892
+      mobility:
+        x: 0.723
+        y: 0.883
+      spell:
+        x: 0.642
+        y: 0.892
+    calib_size: 2280x1080
+    catatan: Diukur dari screenshot; verifikasi dengan 'Tes tekan' di tab Game.
   free_fire:
     name: Free Fire
     package: com.dts.freefireth

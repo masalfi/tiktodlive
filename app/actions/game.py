@@ -65,8 +65,23 @@ def physical_size(adb) -> tuple[int, int] | None:
     return size
 
 
+def _as_quarter_turns(value: int) -> int:
+    """Samakan penulisan rotasi jadi 0-3 (perempatan putaran).
+
+    Android tidak konsisten: `mCurrentRotation` memakai DERAJAT
+    (ROTATION_0/90/180/270) sedangkan field lain memakai perempatan
+    putaran (0/1/2/3). Menyamakan keduanya dengan `% 4` keliru -
+    90 % 4 = 2, yang berarti "tegak terbalik", bukan "mendatar".
+    """
+    if value >= 45:                 # jelas derajat
+        return (value // 90) % 4
+    return value % 4
+
+
 def current_rotation(adb) -> int | None:
-    """Rotasi layar saat ini: 0, 1, 2, atau 3 (0 = tegak).
+    """Rotasi layar saat ini sebagai perempatan putaran: 0-3.
+
+    0 = tegak, 1 = mendatar, 2 = tegak terbalik, 3 = mendatar terbalik.
 
     `wm size` TIDAK berguna untuk ini - ia selalu melaporkan ukuran fisik
     walau HP sedang mendatar. Rotasi nyata hanya bisa dibaca dari dumpsys.
@@ -81,10 +96,13 @@ def current_rotation(adb) -> int | None:
     text = proc.stdout or ""
     match = re.search(r"mCurrentRotation=ROTATION_(\d+)", text)
     if match:
-        return int(match.group(1)) % 4
-    match = re.search(r"\bmRotation=(\d+)", text)
-    if match:
-        return int(match.group(1)) % 4
+        return _as_quarter_turns(int(match.group(1)))
+
+    # `mRotation` sering muncul beberapa kali dengan nilai berbeda (satu
+    # per display/window), jadi hanya dipakai kalau semuanya sepakat.
+    values = {int(v) for v in re.findall(r"\bmRotation=(\d+)", text)}
+    if len(values) == 1:
+        return _as_quarter_turns(values.pop())
     return None
 
 

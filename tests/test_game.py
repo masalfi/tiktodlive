@@ -283,3 +283,65 @@ def test_all_directions_have_sane_angles():
     assert set(DIRECTIONS) >= {"kanan", "kiri", "atas", "bawah"}
     assert DIRECTIONS["kanan"] == 0
     assert DIRECTIONS["bawah"] == 90                 # y bertambah ke bawah di layar
+
+
+# ------------------------------------------- konversi rotasi Android
+
+@pytest.mark.parametrize("raw,expected", [
+    # Android melaporkan DERAJAT lewat mCurrentRotation=ROTATION_<n>
+    (0, 0), (90, 1), (180, 2), (270, 3),
+    # Field lain memakai perempatan putaran langsung
+    (1, 1), (2, 2), (3, 3),
+])
+def test_rotation_units_normalised(raw, expected):
+    """90 % 4 = 2 ('tegak terbalik') - salah. Harus 90 // 90 = 1.
+
+    Bug ini membuat setiap tap di Mobile Legends mendarat di ruang
+    koordinat portrait, jauh dari tombol yang dituju.
+    """
+    from app.actions.game import _as_quarter_turns
+
+    assert _as_quarter_turns(raw) == expected
+
+
+def test_rotation_parsed_from_degrees_format():
+    """Format asli Pixel 4: mCurrentRotation=ROTATION_90 = mendatar."""
+
+    class Degrees(FakeAdb):
+        def run(self, args, timeout=None, binary=False):
+            if args[:3] == ["shell", "dumpsys", "window"]:
+                return SimpleNamespace(
+                    returncode=0, stdout="mCurrentRotation=ROTATION_90\n", stderr=""
+                )
+            return super().run(args, timeout, binary)
+
+    adb = Degrees(1080, 2280)
+    assert current_rotation(adb) == 1
+    assert screen_size(adb) == (2280, 1080)
+
+
+def test_ambiguous_mrotation_ignored():
+    """`mRotation` muncul beberapa kali dengan nilai berbeda (satu per
+    display). Menebak salah satunya berbahaya - lebih baik menyerah."""
+
+    class Ambiguous(FakeAdb):
+        def run(self, args, timeout=None, binary=False):
+            if args[:3] == ["shell", "dumpsys", "window"]:
+                return SimpleNamespace(
+                    returncode=0, stdout="mRotation=0\nmRotation=1\n", stderr=""
+                )
+            return super().run(args, timeout, binary)
+
+    assert current_rotation(Ambiguous()) is None
+
+
+def test_consistent_mrotation_used():
+    class Consistent(FakeAdb):
+        def run(self, args, timeout=None, binary=False):
+            if args[:3] == ["shell", "dumpsys", "window"]:
+                return SimpleNamespace(
+                    returncode=0, stdout="mRotation=1\nmRotation=1\n", stderr=""
+                )
+            return super().run(args, timeout, binary)
+
+    assert current_rotation(Consistent()) == 1
