@@ -30,7 +30,7 @@ from PySide6.QtWidgets import (
 from app.actions.base import get_spec, specs_by_category
 
 # Label kategori supaya jelas aksi berjalan di mana.
-CATEGORY_PREFIX = {"adb": "[HP]", "game": "[GAME]", "host": "[PC]"}
+CATEGORY_PREFIX = {"adb": "[HP]", "app": "[APP]", "game": "[GAME]", "host": "[PC]"}
 from app.engine.rules import COMMON_CONDITIONS, CONDITION_SPECS
 from app.models import Action, Rule
 from app.ui.gift_picker import GiftPicker

@@ -245,6 +245,32 @@ skill 1-2-ulti, `!maju` → jalan ke kanan, Gift Rose → spam serang 5x.
   jalan keluar dari sisi aplikasi ini.
 - Kalibrasi ulang kalau kamu mengubah HUD layout atau resolusi layar.
 
+### Aksi aplikasi
+
+Menutup, membuka, dan memulai ulang aplikasi di HP — termasuk game.
+
+| Aksi | Fungsi |
+|---|---|
+| **Tutup game** | Menutup game dari profil aktif. **Tidak perlu mengetik nama package** |
+| **Mulai ulang game** | Tutup lalu buka lagi game-nya, dengan jeda yang bisa diatur |
+| **Tutup aplikasi yang sedang tampil** | Menutup apa pun yang ada di layar saat itu |
+| **Tutup aplikasi tertentu** | Pilih dari daftar aplikasi yang terpasang |
+| **Buka aplikasi** | Menjalankan aplikasi dari daftar |
+| **Mulai ulang aplikasi** | Tutup + buka aplikasi mana pun |
+| **Tutup semua aplikasi latar** ⚠ | Melegakan memori sebelum main |
+
+Kolom **Aplikasi** berupa dropdown berisi aplikasi yang benar-benar
+terpasang di HP-mu — tidak perlu menghafal nama seperti
+`com.mobile.legends`. Kamu tetap bisa mengetik sendiri kalau perlu.
+
+**Pengaman:** aplikasi sistem (`com.android.systemui`, `android`,
+`com.google.android.gms`, dan lainnya) **selalu ditolak** — menutupnya bisa
+membuat HP tidak bisa dipakai sampai di-reboot. "Tutup semua aplikasi latar"
+juga melewati aplikasi yang sedang tampil.
+
+Contoh rule sudah disiapkan (nonaktif): Gift Lion → tutup game,
+`!restart` → mulai ulang game, gift ≥2000 koin → bersihkan RAM lalu buka game.
+
 ### Tab Gift
 Katalog lengkap gift TikTok beserta ikonnya — cari nama gift, lihat harga koin
 dan apakah gift itu bisa di-streak. Ikon diunduh sekali lalu disimpan lokal.

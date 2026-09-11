@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.actions.adb import AdbExecutor, register_adb_actions
+from app.actions.apps import register_app_actions
 from app.actions.game import register_game_actions
 from app.actions.host import HostExecutor, register_host_actions
 from app.config import RulesLoadError, find_adb, load_rules, load_settings, save_rules, save_settings
@@ -63,6 +64,7 @@ class MainWindow(QMainWindow):
         register_adb_actions()
         register_host_actions()
         register_game_actions()
+        register_app_actions()
 
         self.settings = load_settings()
         try:
@@ -118,6 +120,7 @@ class MainWindow(QMainWindow):
 
         self._sync_overlay_channels()
         self._sync_game_profile()
+        self._install_package_provider()
         self._start_device_watcher()
         self._init_gift_catalog()
 
@@ -438,6 +441,25 @@ class MainWindow(QMainWindow):
             self.log_panel.add_system("PANIC dimatikan, aksi berjalan lagi.")
 
     # --------------------------------------------------------------- lainnya
+
+    def _install_package_provider(self) -> None:
+        """Sediakan daftar aplikasi HP untuk dropdown di editor rule.
+
+        Hasilnya di-cache: `pm list packages` butuh beberapa detik lewat
+        WiFi dan form bisa dibangun ulang berkali-kali.
+        """
+        from app.actions.apps import list_packages
+        from app.ui.param_form import set_package_provider
+
+        cache: dict[str, list[str]] = {}
+
+        def provider() -> list[str]:
+            if "v" not in cache:
+                cache["v"] = list_packages(self.adb) if self.adb.available else []
+            return cache["v"]
+
+        self._package_cache = cache
+        set_package_provider(provider)
 
     def _sync_game_profile(self) -> None:
         """Aksi game membaca profil lewat adb.game_profile, jadi profil

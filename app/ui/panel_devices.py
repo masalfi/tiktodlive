@@ -19,7 +19,7 @@ from PySide6.QtWidgets import (
 from app.actions.base import HANDLERS, coerce_params, get_spec, specs_by_category
 
 # Label kategori supaya jelas aksi berjalan di mana.
-CATEGORY_PREFIX = {"adb": "[HP]", "game": "[GAME]", "host": "[PC]"}
+CATEGORY_PREFIX = {"adb": "[HP]", "app": "[APP]", "game": "[GAME]", "host": "[PC]"}
 from app.ui.param_form import ParamForm
 from app.ui.theme import DANGER, OK, TEXT_DIM
 

@@ -6,10 +6,13 @@ aksi baru cukup dengan mendaftarkannya di registry - GUI ikut otomatis.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
+
+from PySide6.QtCore import Qt
 
 from PySide6.QtWidgets import (
     QCheckBox,
+    QCompleter,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
@@ -21,6 +24,25 @@ from PySide6.QtWidgets import (
 
 from app.actions.base import ActionSpec
 from app.ui.theme import TEXT_DIM
+
+
+# Penyedia daftar aplikasi di HP. MainWindow mengisinya saat start supaya
+# form tidak perlu tahu apa-apa soal adb.
+_package_provider: "Callable[[], list[str]] | None" = None
+
+
+def set_package_provider(provider) -> None:
+    global _package_provider
+    _package_provider = provider
+
+
+def available_packages() -> list[str]:
+    if _package_provider is None:
+        return []
+    try:
+        return _package_provider()
+    except Exception:                               # noqa: BLE001
+        return []
 
 
 class ParamForm(QWidget):
@@ -61,6 +83,24 @@ class ParamForm(QWidget):
             if p.kind == "bool":
                 widget = QCheckBox()
                 widget.setChecked(bool(current))
+            elif p.kind == "package":
+                # Daftar aplikasi terpasang, tapi tetap bisa diketik sendiri
+                # kalau aplikasinya belum terpasang saat rule dibuat.
+                widget = QComboBox()
+                widget.setEditable(True)
+                widget.setInsertPolicy(QComboBox.NoInsert)
+                packages = available_packages()
+                widget.addItem("")
+                widget.addItems(packages)
+                if packages:
+                    completer = QCompleter(packages, widget)
+                    completer.setCaseSensitivity(Qt.CaseInsensitive)
+                    completer.setFilterMode(Qt.MatchContains)
+                    widget.setCompleter(completer)
+                    widget.lineEdit().setPlaceholderText(f"{len(packages)} aplikasi terdeteksi")
+                else:
+                    widget.lineEdit().setPlaceholderText("mis. com.mobile.legends")
+                widget.setCurrentText(str(current) if current else "")
             elif p.kind == "choice":
                 widget = QComboBox()
                 widget.addItems(p.choices)
@@ -103,7 +143,7 @@ class ParamForm(QWidget):
             if isinstance(widget, QCheckBox):
                 out[name] = widget.isChecked()
             elif isinstance(widget, QComboBox):
-                out[name] = widget.currentText()
+                out[name] = widget.currentText().strip()
             elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
                 out[name] = widget.value()
             elif isinstance(widget, QLineEdit):

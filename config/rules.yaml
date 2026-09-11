@@ -262,3 +262,57 @@ rules:
   cooldown_sec: 5.0
   max_per_hour: null
   require_confirm: false
+- id: tutupgm1
+  name: Gift Lion -> TUTUP game (troll)
+  enabled: false
+  event_kind: gift
+  conditions:
+    gift_name: Lion
+    gift_name_mode: exact
+  actions:
+  - type: host.overlay
+    params:
+      title: '{user} menutup gamenya!'
+      subtitle: ''
+      style: danger
+      duration_ms: 5000
+      channel: alert
+    delay_after: 2.0
+  - type: app.close_game
+    params: {}
+    delay_after: 0.0
+  cooldown_sec: 300.0
+  max_per_hour: 3
+  require_confirm: true
+- id: restrtg1
+  name: Komentar !restart -> mulai ulang game
+  enabled: false
+  event_kind: comment
+  conditions:
+    starts_with: '!restart'
+  actions:
+  - type: app.restart_game
+    params:
+      delay_sec: 3.0
+    delay_after: 0.0
+  cooldown_sec: 600.0
+  max_per_hour: 2
+  require_confirm: true
+- id: bersih01
+  name: Gift >=2000 koin -> bersihkan RAM lalu buka game
+  enabled: false
+  event_kind: gift
+  conditions:
+    min_coins: 2000
+  actions:
+  - type: app.clear_background
+    params:
+      kecuali: ''
+    delay_after: 2.0
+  - type: app.open
+    params:
+      package: com.mobile.legends
+    delay_after: 0.0
+  cooldown_sec: 900.0
+  max_per_hour: 2
+  require_confirm: true
