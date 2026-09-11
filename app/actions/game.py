@@ -146,15 +146,21 @@ def resolve_point(adb, profile: dict, button: str) -> tuple[int, int] | str:
     Kembalikan (x, y) atau pesan error berupa string.
     """
     buttons = profile.get("buttons") or {}
-    entry = buttons.get(button)
+    # Nama umum seperti "ultimate" atau "skill1" menunjuk tombol yang
+    # namanya di layar berbeda (mis. "aoe"), jadi alias diterjemahkan.
+    aliases = profile.get("aliases") or {}
+    resolved = aliases.get(button, button)
+
+    entry = buttons.get(resolved)
     if not entry:
-        available = ", ".join(sorted(buttons)) or "(profil kosong)"
+        known = sorted(set(buttons) | set(aliases))
+        available = ", ".join(known) or "(profil kosong)"
         return f"Tombol '{button}' belum dikalibrasi. Yang tersedia: {available}"
 
     try:
         px, py = float(entry["x"]), float(entry["y"])
     except (KeyError, TypeError, ValueError):
-        return f"Posisi tombol '{button}' rusak di profil"
+        return f"Posisi tombol '{resolved}' rusak di profil"
 
     size = screen_size(adb)
     if size is None:
@@ -369,11 +375,11 @@ def _h_combo(adb, p: dict[str, Any]) -> ActionResult:
 # --------------------------------------------------------------- registrasi
 
 def register_game_actions() -> None:
-    button_help = "nama tombol dari tab Game (mis. ultimate, recall, skill1)"
+    button_help = "pilih dari tombol yang sudah dikalibrasi di tab Game"
 
     register(
         ActionSpec("game.tap_button", "Tekan tombol game", "game", [
-            ParamSpec("button", "Tombol", "str", "ultimate", help=button_help),
+            ParamSpec("button", "Tombol", "game_button", "ultimate", help=button_help),
             ParamSpec("repeat", "Ulangi", "int", 1, minimum=1, maximum=20),
             ParamSpec("gap_ms", "Jeda antar tekan (ms)", "int", 120),
         ], help="Posisi tombol diambil dari profil di tab Game"),
@@ -381,14 +387,14 @@ def register_game_actions() -> None:
     )
     register(
         ActionSpec("game.hold_button", "Tekan & tahan tombol game", "game", [
-            ParamSpec("button", "Tombol", "str", "recall", help=button_help),
+            ParamSpec("button", "Tombol", "game_button", "recall", help=button_help),
             ParamSpec("duration_ms", "Lama tahan (ms)", "int", 1500),
         ], help="Untuk recall atau skill yang perlu di-charge"),
         _h_hold_button,
     )
     register(
         ActionSpec("game.aim_skill", "Skill terarah", "game", [
-            ParamSpec("button", "Tombol", "str", "skill1", help=button_help),
+            ParamSpec("button", "Tombol", "game_button", "skill1", help=button_help),
             ParamSpec("direction", "Arah", "choice", "kanan", choices=list(DIRECTIONS)),
             ParamSpec("distance", "Jarak geser (0-0.5)", "float", 0.12),
             ParamSpec("duration_ms", "Durasi (ms)", "int", 300),

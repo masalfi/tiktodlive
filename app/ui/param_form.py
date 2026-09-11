@@ -36,6 +36,25 @@ def set_package_provider(provider) -> None:
     _package_provider = provider
 
 
+# Penyedia daftar tombol game dari profil yang sedang aktif.
+_button_provider: "Callable[[], list[tuple[str, str]]] | None" = None
+
+
+def set_button_provider(provider) -> None:
+    global _button_provider
+    _button_provider = provider
+
+
+def available_buttons() -> list[tuple[str, str]]:
+    """[(nama, label tampilan)] tombol game dari profil aktif."""
+    if _button_provider is None:
+        return []
+    try:
+        return _button_provider()
+    except Exception:                               # noqa: BLE001
+        return []
+
+
 def available_packages() -> list[str]:
     if _package_provider is None:
         return []
@@ -43,6 +62,18 @@ def available_packages() -> list[str]:
         return _package_provider()
     except Exception:                               # noqa: BLE001
         return []
+
+
+def _select_button(combo: QComboBox, name: str) -> None:
+    if not name:
+        if combo.count():
+            combo.setCurrentIndex(0)
+        return
+    for row in range(combo.count()):
+        if combo.itemData(row) == name:
+            combo.setCurrentIndex(row)
+            return
+    combo.setCurrentText(name)          # tombol tak dikenal, tetap dipakai
 
 
 class ParamForm(QWidget):
@@ -85,6 +116,30 @@ class ParamForm(QWidget):
             if p.kind == "bool":
                 widget = QCheckBox()
                 widget.setChecked(bool(current))
+            elif p.kind == "game_button":
+                # Ambil dari profil di tab Game supaya tidak perlu
+                # menghafal nama tombol hasil kalibrasi.
+                widget = QComboBox()
+                widget.setEditable(True)
+                widget.setInsertPolicy(QComboBox.NoInsert)
+                buttons = available_buttons()
+                model = widget.model()
+                for name, label in buttons:
+                    widget.addItem(label, name)
+                    if not name:
+                        # Baris pemisah kelompok - tidak bisa dipilih.
+                        item = model.item(widget.count() - 1)
+                        if item is not None:
+                            item.setEnabled(False)
+                if buttons:
+                    completer = QCompleter([b[1] for b in buttons if b[0]], widget)
+                    completer.setCaseSensitivity(Qt.CaseInsensitive)
+                    completer.setFilterMode(Qt.MatchContains)
+                    widget.setCompleter(completer)
+                else:
+                    widget.lineEdit().setPlaceholderText(
+                        "kalibrasi dulu di tab Game")
+                _select_button(widget, str(current) if current else "")
             elif p.kind == "package":
                 # Daftar aplikasi terpasang, tapi tetap bisa diketik sendiri
                 # kalau aplikasinya belum terpasang saat rule dibuat.
@@ -145,7 +200,12 @@ class ParamForm(QWidget):
             if isinstance(widget, QCheckBox):
                 out[name] = widget.isChecked()
             elif isinstance(widget, QComboBox):
-                out[name] = widget.currentText().strip()
+                text = widget.currentText().strip()
+                index = widget.findText(text)
+                data = widget.itemData(index) if index >= 0 else None
+                # Item tombol game menyimpan nama asli di data; teksnya
+                # bisa berisi keterangan seperti "skill1  (= mobility)".
+                out[name] = str(data) if data else text
             elif isinstance(widget, (QSpinBox, QDoubleSpinBox)):
                 out[name] = widget.value()
             elif isinstance(widget, QLineEdit):

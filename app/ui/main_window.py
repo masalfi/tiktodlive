@@ -465,6 +465,53 @@ class MainWindow(QMainWindow):
         """Aksi game membaca profil lewat adb.game_profile, jadi profil
         yang sedang dipilih harus selalu disalurkan ke sana."""
         self.adb.game_profile = self.game_panel.current_profile()
+        self._install_button_provider()
+
+    def _install_button_provider(self) -> None:
+        """Sediakan daftar tombol game untuk dropdown di editor rule.
+
+        Tanpa ini pengguna harus mengetik nama tombol hasil kalibrasi
+        dari ingatan.
+        """
+        from app.ui.param_form import set_button_provider
+
+        def provider() -> list[tuple[str, str]]:
+            profile = self.game_panel.current_profile()
+            buttons = profile.get("buttons") or {}
+            if not buttons:
+                return []
+
+            aliases = profile.get("aliases") or {}
+            groups = profile.get("groups") or {}
+
+            # Nama umum ditempelkan sebagai keterangan, bukan jadi baris
+            # tersendiri - kalau tidak daftarnya penuh duplikat.
+            extra: dict[str, list[str]] = {}
+            for alias, target in aliases.items():
+                extra.setdefault(target, []).append(alias)
+
+            def row(name: str) -> tuple[str, str]:
+                names = extra.get(name)
+                label = f"{name}  ({', '.join(sorted(names))})" if names else name
+                return name, label
+
+            rows: list[tuple[str, str]] = []
+            seen: set[str] = set()
+            for title, members in groups.items():
+                grup = [m for m in members if m in buttons]
+                if not grup:
+                    continue
+                rows.append(("", f"— {title} —"))     # pemisah kelompok
+                for name in grup:
+                    rows.append(row(name))
+                    seen.add(name)
+            sisa = [n for n in sorted(buttons) if n not in seen]
+            if sisa:
+                rows.append(("", "— Lainnya —"))
+                rows.extend(row(n) for n in sisa)
+            return rows
+
+        set_button_provider(provider)
 
     def _rule_channels(self) -> list[str]:
         """Channel yang dipakai rule, supaya muncul di dropdown tab Overlay."""

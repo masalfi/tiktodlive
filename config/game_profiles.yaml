@@ -132,24 +132,37 @@ profiles:
       tutup_panel:
         x: 0.9399
         y: 0.4907
-      skill1:
-        x: 0.7228
-        y: 0.8889
-      skill2:
-        x: 0.7763
-        y: 0.6898
-      skill3:
-        x: 0.8596
-        y: 0.5972
-      ultimate:
-        x: 0.8596
-        y: 0.5972
-      spell:
-        x: 0.6439
-        y: 0.8935
-      heal:
-        x: 0.5754
-        y: 0.8935
-      shop:
-        x: 0.536
-        y: 0.7889
+    aliases:
+      skill1: mobility
+      skill2: burst
+      skill3: aoe
+      ultimate: aoe
+      spell: flicker
+      heal: regen
+      shop: item1
+    groups:
+      Serang & skill:
+      - attack
+      - mobility
+      - burst
+      - aoe
+      Spell & item:
+      - recall
+      - regen
+      - flicker
+      - item1
+      - item2
+      Gerak:
+      - joystick
+      Sinyal & chat:
+      - sinyal_serang
+      - sinyal_mundur
+      - sinyal_kumpul
+      - chat
+      Antarmuka:
+      - minimap
+      - pengaturan
+      - suara
+      - mikrofon
+      - zoom
+      - tutup_panel

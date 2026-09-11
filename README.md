@@ -226,10 +226,30 @@ persis di mana tap mendarat.
 | **Gerakkan hero** | Geser joystick ke satu arah selama N detik |
 | **Combo** | Beberapa tombol berurutan, mis. `skill1,skill2,ultimate` |
 
-Tombol bawaan profil Mobile Legends: `attack`, `skill1`, `skill2`, `skill3`,
-`ultimate`, `spell`, `recall`, `heal`, `joystick`, `shop`, `minimap`,
-`upgrade1..3`. Kamu bisa menambah tombol baru langsung di
-`config/game_profiles.yaml`.
+#### Memilih tombol saat membuat rule
+
+Kolom **Tombol** pada aksi game adalah **dropdown** berisi tombol yang
+sudah kamu kalibrasi — tidak perlu menghafal namanya. Isinya dikelompokkan:
+
+```
+— Serang & skill —
+   attack
+   mobility  (skill1)
+   burst     (skill2)
+   aoe       (skill3, ultimate)
+— Spell & item —
+   recall
+   regen     (heal)
+   flicker   (spell)
+   ...
+```
+
+Nama dalam kurung adalah **alias** — nama umum yang menunjuk tombol sama.
+Rule yang memakai `ultimate` dan yang memakai `aoe` menekan titik identik,
+jadi rule lama tetap jalan meski nama di layarmu berbeda.
+
+Alias diatur di `config/game_profiles.yaml` bagian `aliases`, dan
+pengelompokan dropdown di bagian `groups`.
 
 Contoh rule sudah disiapkan (semua **nonaktif** sampai kamu kalibrasi):
 Gift Lion → ultimate, `!recall` → pulang ke base, gift ≥1000 koin → combo

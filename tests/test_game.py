@@ -362,20 +362,21 @@ def test_pixel4_template_is_complete():
     assert profile["landscape"] is True
     assert profile["calibrated"] is True
 
-    wajib = {
-        "joystick", "attack", "recall", "minimap",
-        "skill1", "skill2", "skill3", "ultimate", "spell",
-    }
+    # Nama umum kini disimpan terpisah sebagai alias, bukan menggandakan
+    # entri di "buttons" - lihat test alias di bawah.
+    wajib = {"joystick", "attack", "recall", "minimap"}
     assert wajib <= set(profile["buttons"]), wajib - set(profile["buttons"])
+
+    umum = {"skill1", "skill2", "skill3", "ultimate", "spell"}
+    assert umum <= set(profile.get("aliases") or {}), "alias nama umum hilang"
 
     for name, point in profile["buttons"].items():
         assert 0.0 < point["x"] < 1.0, f"{name} x di luar layar"
         assert 0.0 < point["y"] < 1.0, f"{name} y di luar layar"
 
 
-def test_pixel4_aliases_match_their_targets():
-    """skill1/skill2/skill3 hanyalah nama lain dari tombol yang terlihat -
-    kalau tidak sama, rule akan menekan tempat berbeda dari yang dikira."""
+def test_pixel4_aliases_point_to_real_buttons():
+    """Alias yang menunjuk tombol tak terkalibrasi = rule menekan udara."""
     from app.config import load_games
 
     profile = load_games().get("profiles", {}).get("pixel4_ml")
@@ -383,10 +384,45 @@ def test_pixel4_aliases_match_their_targets():
         pytest.skip("template pixel4_ml tidak ada")
 
     buttons = profile["buttons"]
-    for alias, target in [("skill1", "mobility"), ("skill2", "burst"),
-                          ("skill3", "aoe"), ("ultimate", "aoe"),
-                          ("spell", "flicker")]:
-        assert buttons[alias] == buttons[target], f"{alias} tidak sama dengan {target}"
+    for alias, target in (profile.get("aliases") or {}).items():
+        assert target in buttons, f"alias '{alias}' menunjuk '{target}' yang tidak ada"
+
+
+def test_alias_resolves_to_same_point_as_target():
+    """skill1 dan mobility harus menekan titik yang persis sama."""
+    from app.config import load_games
+
+    profile = load_games().get("profiles", {}).get("pixel4_ml")
+    if profile is None:
+        pytest.skip("template pixel4_ml tidak ada")
+
+    adb = FakeAdb(1080, 2280, rotation=1)
+    for alias, target in (profile.get("aliases") or {}).items():
+        assert resolve_point(adb, profile, alias) == resolve_point(adb, profile, target)
+
+
+def test_unknown_button_message_lists_aliases_too():
+    """Pesan bantuan harus menyebut nama umum, bukan hanya nama layar."""
+    profile = {
+        "landscape": True,
+        "buttons": {"aoe": {"x": 0.5, "y": 0.5}},
+        "aliases": {"ultimate": "aoe"},
+    }
+    message = resolve_point(FakeAdb(1080, 2280, rotation=1), profile, "tidakada")
+    assert "aoe" in message and "ultimate" in message
+
+
+def test_groups_cover_every_button():
+    """Tombol yang tidak masuk kelompok akan tersembunyi di dropdown."""
+    from app.config import load_games
+
+    profile = load_games().get("profiles", {}).get("pixel4_ml")
+    if profile is None:
+        pytest.skip("template pixel4_ml tidak ada")
+
+    grouped = {name for members in (profile.get("groups") or {}).values() for name in members}
+    missing = set(profile["buttons"]) - grouped
+    assert not missing, f"belum masuk kelompok: {missing}"
 
 
 def test_pixel4_buttons_resolve_to_sane_pixels():
