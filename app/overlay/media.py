@@ -1,0 +1,140 @@
+"""Registry file media untuk overlay.
+
+Overlay berjalan di browser (OBS Browser Source), jadi file lokal tidak
+bisa diakses langsung - harus disajikan lewat HTTP.
+
+Kenapa pakai registry, bukan `?path=/isi/path/apa/saja`: endpoint seperti
+itu akan menyajikan file APA PUN di komputer ke siapa saja yang bisa
+menghubungi port overlay. Di sini setiap file harus didaftarkan dulu oleh
+aplikasi, lalu diakses lewat ID acak. Tidak ada path dari luar yang
+dipercaya, jadi tidak ada celah path traversal.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import logging
+import mimetypes
+import threading
+from pathlib import Path
+
+log = logging.getLogger(__name__)
+
+# Tipe yang boleh disajikan. Selain ini ditolak.
+AUDIO_SUFFIXES = {".mp3", ".wav", ".ogg", ".m4a", ".aac", ".flac", ".opus"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".apng"}
+VIDEO_SUFFIXES = {".mp4", ".webm", ".mov", ".mkv"}
+ALLOWED_SUFFIXES = AUDIO_SUFFIXES | IMAGE_SUFFIXES | VIDEO_SUFFIXES
+
+# Batas ukuran; file raksasa akan membuat overlay tersendat.
+MAX_BYTES = 64 * 1024 * 1024
+
+_FALLBACK_MIME = {
+    ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
+    ".m4a": "audio/mp4", ".aac": "audio/aac", ".flac": "audio/flac",
+    ".opus": "audio/opus", ".webm": "video/webm", ".mp4": "video/mp4",
+    ".mov": "video/quicktime", ".mkv": "video/x-matroska",
+    ".apng": "image/apng", ".webp": "image/webp", ".svg": "image/svg+xml",
+}
+
+
+class MediaError(ValueError):
+    """File tidak bisa dipakai - pesannya layak ditampilkan ke user."""
+
+
+def kind_of(path: Path) -> str:
+    """audio | image | video, atau '' kalau tidak didukung."""
+    suffix = path.suffix.lower()
+    if suffix in AUDIO_SUFFIXES:
+        return "audio"
+    if suffix in IMAGE_SUFFIXES:
+        return "image"
+    if suffix in VIDEO_SUFFIXES:
+        return "video"
+    return ""
+
+
+def mime_of(path: Path) -> str:
+    guessed, _ = mimetypes.guess_type(path.name)
+    if guessed:
+        return guessed
+    return _FALLBACK_MIME.get(path.suffix.lower(), "application/octet-stream")
+
+
+class MediaRegistry:
+    """Peta ID -> file. Aman dipakai lintas thread."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._by_id: dict[str, Path] = {}
+        self._by_path: dict[str, str] = {}
+
+    def register(self, raw_path: str) -> tuple[str, str]:
+        """Daftarkan file. Kembalikan (media_id, jenis).
+
+        Lempar MediaError dengan pesan yang jelas kalau file bermasalah.
+        """
+        if not raw_path or not str(raw_path).strip():
+            raise MediaError("Path file kosong")
+
+        path = Path(str(raw_path)).expanduser()
+        try:
+            path = path.resolve(strict=True)
+        except (OSError, RuntimeError) as exc:
+            raise MediaError(f"File tidak ditemukan: {raw_path}") from exc
+
+        if not path.is_file():
+            raise MediaError(f"Bukan file: {path}")
+
+        kind = kind_of(path)
+        if not kind:
+            raise MediaError(
+                f"Format '{path.suffix}' tidak didukung. "
+                f"Audio: mp3/wav/ogg/m4a - Gambar: png/jpg/gif/webp - Video: mp4/webm"
+            )
+
+        try:
+            size = path.stat().st_size
+        except OSError as exc:
+            raise MediaError(f"Tidak bisa membaca file: {exc}") from exc
+
+        if size == 0:
+            raise MediaError(f"File kosong: {path.name}")
+        if size > MAX_BYTES:
+            raise MediaError(
+                f"File terlalu besar ({size / 1048576:.0f} MB, maks {MAX_BYTES // 1048576} MB)"
+            )
+
+        key = str(path)
+        with self._lock:
+            existing = self._by_path.get(key)
+            if existing is not None:
+                return existing, kind
+            # ID diturunkan dari path supaya stabil antar restart, tapi
+            # tetap tidak membocorkan isi path ke URL.
+            media_id = hashlib.sha256(key.encode("utf-8")).hexdigest()[:16]
+            self._by_id[media_id] = path
+            self._by_path[key] = media_id
+        return media_id, kind
+
+    def resolve(self, media_id: str) -> Path | None:
+        """Ambil path dari ID. None kalau tidak terdaftar."""
+        with self._lock:
+            path = self._by_id.get(media_id)
+        # File bisa saja dihapus/dipindah setelah didaftarkan.
+        if path is not None and path.is_file():
+            return path
+        return None
+
+    def clear(self) -> None:
+        with self._lock:
+            self._by_id.clear()
+            self._by_path.clear()
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._by_id)
+
+
+# Registry bersama satu aplikasi.
+REGISTRY = MediaRegistry()

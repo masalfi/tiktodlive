@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+screenshots/
+config/settings.yaml
+config/gifts.json
+config/gift_icons/
+vendor/

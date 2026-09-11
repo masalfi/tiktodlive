@@ -1,0 +1,10 @@
+# TikTok Live Controller - dependencies
+TikTokLive>=7.0.0     # koneksi TikTok LIVE (butuh Python >=3.10)
+PySide6>=6.6          # GUI native + QSoundEffect untuk SFX
+aiohttp>=3.9          # overlay HTTP + WebSocket server (OBS Browser Source)
+PyYAML>=6.0           # config & rules
+pynput>=1.7           # keypress di host PC
+httpx>=0.27           # unduh scrcpy, ikon gift, cek kuota
+
+# dev
+pytest>=8.0

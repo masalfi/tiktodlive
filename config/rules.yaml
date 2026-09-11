@@ -1,0 +1,264 @@
+rules:
+- id: rose0001
+  name: Rose -> tap layar + confetti
+  enabled: true
+  event_kind: gift
+  conditions:
+    gift_name: Rose
+    gift_name_mode: exact
+  actions:
+  - type: adb.tap
+    params:
+      x: 540
+      y: 1200
+    delay_after: 0.0
+  - type: host.overlay
+    params:
+      title: '{user} kirim {count}x Rose'
+      subtitle: layar di-tap!
+      style: gift
+      duration_ms: 4000
+      channel: alert
+    delay_after: 0.0
+  - type: host.overlay_effect
+    params:
+      effect: confetti
+      count: 60
+      channel: alert
+    delay_after: 0.0
+  cooldown_sec: 1.0
+  max_per_hour: null
+  require_confirm: false
+- id: home0001
+  name: Komentar !home -> tombol home
+  enabled: true
+  event_kind: comment
+  conditions:
+    starts_with: '!home'
+  actions:
+  - type: adb.keyevent
+    params:
+      keycode: KEYCODE_HOME
+    delay_after: 0.0
+  cooldown_sec: 5.0
+  max_per_hour: null
+  require_confirm: false
+- id: vol00001
+  name: Komentar !volup -> naikkan volume
+  enabled: true
+  event_kind: comment
+  conditions:
+    starts_with: '!volup'
+  actions:
+  - type: adb.volume
+    params:
+      direction: up
+      steps: 3
+    delay_after: 0.0
+  cooldown_sec: 3.0
+  max_per_hour: null
+  require_confirm: false
+- id: folw0001
+  name: Follow baru -> overlay + suara
+  enabled: true
+  event_kind: follow
+  conditions: {}
+  actions:
+  - type: host.overlay
+    params:
+      title: Makasih follow-nya, {user}!
+      subtitle: ''
+      style: follow
+      duration_ms: 4000
+      channel: alert
+    delay_after: 0.0
+  cooldown_sec: 0.0
+  max_per_hour: null
+  require_confirm: false
+- id: musik001
+  name: Komentar !musik -> putar musik latar
+  enabled: false
+  event_kind: comment
+  conditions:
+    starts_with: '!musik'
+  actions:
+  - type: host.overlay_music
+    params:
+      action: play
+      file: ''
+      volume: 0.4
+      fade_ms: 1500
+      loop: true
+      channel: musik
+    delay_after: 0.0
+  cooldown_sec: 10.0
+  max_per_hour: null
+  require_confirm: false
+- id: stopmsk1
+  name: Komentar !stop -> hentikan musik
+  enabled: false
+  event_kind: comment
+  conditions:
+    starts_with: '!stop'
+  actions:
+  - type: host.overlay_music
+    params:
+      action: stop
+      fade_ms: 1500
+      channel: musik
+    delay_after: 0.0
+  cooldown_sec: 3.0
+  max_per_hour: null
+  require_confirm: false
+- id: besar001
+  name: Gift >=500 koin -> hujan mawar + getar + teks
+  enabled: false
+  event_kind: gift
+  conditions:
+    min_coins: 500
+  actions:
+  - type: host.overlay_effect
+    params:
+      effect: rain
+      emoji: 🌹
+      count: 40
+      channel: efek
+    delay_after: 0.0
+  - type: host.overlay_effect
+    params:
+      effect: shake
+      duration_ms: 700
+      channel: efek
+    delay_after: 0.0
+  - type: host.overlay_effect
+    params:
+      effect: text
+      text: '{user} kirim {gift}!'
+      color: '#ffd24d'
+      channel: efek
+    delay_after: 0.0
+  cooldown_sec: 5.0
+  max_per_hour: null
+  require_confirm: false
+- id: gede0001
+  name: Gift besar (>=1000 koin) -> reboot HP
+  enabled: false
+  event_kind: gift
+  conditions:
+    min_coins: 1000
+  actions:
+  - type: host.overlay
+    params:
+      title: '{user} mengirim gift besar!'
+      subtitle: HP akan reboot...
+      style: danger
+      duration_ms: 6000
+    delay_after: 3.0
+  - type: adb.reboot
+    params:
+      mode: normal
+    delay_after: 0.0
+  cooldown_sec: 300.0
+  max_per_hour: 2
+  require_confirm: true
+- id: mlulti01
+  name: Gift Lion -> pakai ULTIMATE
+  enabled: false
+  event_kind: gift
+  conditions:
+    gift_name: Lion
+    gift_name_mode: exact
+  actions:
+  - type: host.overlay
+    params:
+      title: '{user} pakai ULTIMATE!'
+      subtitle: ''
+      style: danger
+      duration_ms: 3000
+      channel: alert
+    delay_after: 0.0
+  - type: game.tap_button
+    params:
+      button: ultimate
+      repeat: 1
+      gap_ms: 120
+    delay_after: 0.0
+  cooldown_sec: 30.0
+  max_per_hour: null
+  require_confirm: false
+- id: mlrecal1
+  name: Komentar !recall -> pulang ke base
+  enabled: false
+  event_kind: comment
+  conditions:
+    starts_with: '!recall'
+  actions:
+  - type: game.hold_button
+    params:
+      button: recall
+      duration_ms: 1500
+    delay_after: 0.0
+  - type: host.overlay_effect
+    params:
+      effect: text
+      text: '{user} menyuruh RECALL!'
+      color: '#4dd2ff'
+      channel: efek
+    delay_after: 0.0
+  cooldown_sec: 20.0
+  max_per_hour: null
+  require_confirm: false
+- id: mlcombo1
+  name: Gift >=1000 koin -> combo skill 1-2-ulti
+  enabled: false
+  event_kind: gift
+  conditions:
+    min_coins: 1000
+  actions:
+  - type: host.overlay_effect
+    params:
+      effect: shake
+      duration_ms: 600
+      channel: efek
+    delay_after: 0.0
+  - type: game.combo
+    params:
+      buttons: skill1,skill2,ultimate
+      gap_ms: 300
+    delay_after: 0.0
+  cooldown_sec: 60.0
+  max_per_hour: 10
+  require_confirm: false
+- id: mlmove01
+  name: Komentar !maju -> jalan ke kanan 2 detik
+  enabled: false
+  event_kind: comment
+  conditions:
+    starts_with: '!maju'
+  actions:
+  - type: game.move
+    params:
+      direction: kanan
+      duration_ms: 2000
+      distance: 0.09
+    delay_after: 0.0
+  cooldown_sec: 8.0
+  max_per_hour: null
+  require_confirm: false
+- id: mlspam01
+  name: Gift Rose -> spam serang 5x
+  enabled: false
+  event_kind: gift
+  conditions:
+    gift_name: Rose
+    gift_name_mode: exact
+  actions:
+  - type: game.tap_button
+    params:
+      button: attack
+      repeat: 5
+      gap_ms: 150
+    delay_after: 0.0
+  cooldown_sec: 5.0
+  max_per_hour: null
+  require_confirm: false

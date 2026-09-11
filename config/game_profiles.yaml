@@ -1,0 +1,57 @@
+# Profil tombol game.
+#
+# PENTING: posisi disimpan sebagai PERSENTASE layar (0.0 - 1.0), bukan
+# piksel, supaya tetap benar di HP dengan resolusi berbeda.
+#
+#   x: 0.0 = tepi kiri,  1.0 = tepi kanan
+#   y: 0.0 = tepi atas,  1.0 = tepi bawah
+#
+# Nilai bawaan di bawah hanya PERKIRAAN dari tata letak HUD standar
+# Mobile Legends. Mobile Legends mengizinkan pemain memindahkan tombol
+# sendiri, jadi posisimu hampir pasti berbeda.
+#
+# Cara benar: buka tab "Game" di aplikasi -> Ambil Screenshot saat game
+# terbuka -> klik tiap tombol untuk mengkalibrasi. Jauh lebih akurat
+# daripada menebak angka di sini.
+
+active: mobile_legends
+
+profiles:
+
+  mobile_legends:
+    name: Mobile Legends
+    package: com.mobile.legends
+    landscape: true          # dikalibrasi saat layar mendatar
+    calibrated: false        # jadi true setelah kamu kalibrasi sendiri
+    buttons:
+      # --- kanan: serang & skill ---
+      attack:      {x: 0.870, y: 0.750}   # tombol serang besar
+      skill1:      {x: 0.735, y: 0.850}
+      skill2:      {x: 0.775, y: 0.620}
+      skill3:      {x: 0.865, y: 0.450}   # sama dengan ultimate
+      ultimate:    {x: 0.865, y: 0.450}
+      # --- kanan bawah: spell & item ---
+      spell:       {x: 0.660, y: 0.900}   # battle spell (flicker, dll)
+      recall:      {x: 0.600, y: 0.940}
+      heal:        {x: 0.955, y: 0.920}   # item slot pertama
+      # --- kiri: gerak & info ---
+      joystick:    {x: 0.160, y: 0.720}   # titik tengah joystick
+      minimap:     {x: 0.075, y: 0.160}
+      # --- atas kanan ---
+      shop:        {x: 0.965, y: 0.200}
+      # --- lain-lain ---
+      upgrade1:    {x: 0.700, y: 0.760}   # tombol upgrade skill 1
+      upgrade2:    {x: 0.735, y: 0.545}
+      upgrade3:    {x: 0.815, y: 0.385}
+
+  # Contoh profil kedua - salin pola di atas untuk game lain.
+  free_fire:
+    name: Free Fire
+    package: com.dts.freefireth
+    landscape: true
+    calibrated: false
+    buttons:
+      tembak:      {x: 0.880, y: 0.720}
+      lompat:      {x: 0.930, y: 0.520}
+      jongkok:     {x: 0.780, y: 0.860}
+      joystick:    {x: 0.150, y: 0.740}

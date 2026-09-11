@@ -1,0 +1,32 @@
+# Contoh konfigurasi. Salin jadi "settings.yaml" lalu sesuaikan.
+#
+# settings.yaml TIDAK ikut di-commit (berisi API key pribadi).
+# File ini dibuat otomatis saat aplikasi pertama dijalankan, jadi kamu
+# tidak harus menyalinnya manual.
+
+tiktok:
+  username: ''            # username TikTok tanpa @
+  sign_api_key: ''        # API key EulerStream (opsional tapi disarankan)
+  auto_reconnect: true
+  backend: auto           # auto | eulerstream | tiktoklive
+
+adb:
+  path: ''                # kosong = auto-detect (pakai adb bawaan scrcpy)
+  serial: ''              # kosong = device pertama
+  timeout_sec: 15
+
+scrcpy:
+  path: ''                # kosong = auto-detect dari folder vendor/
+  wireless_port: 5555
+  options: {}             # diisi dari tab scrcpy
+
+overlay:
+  enabled: true
+  host: 127.0.0.1
+  port: 8777
+  test: {}                # pengaturan terakhir di tab Overlay
+
+safety:
+  max_queue: 50           # antrian penuh -> event baru di-drop
+  reboot_max_per_hour: 2  # pengaman keras, rule tidak bisa melewatinya
+  confirm_timeout_sec: 10 # dialog konfirmasi auto-batal

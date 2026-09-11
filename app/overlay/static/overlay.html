@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Live Controller Overlay</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: transparent;         /* penting untuk OBS Browser Source */
+    overflow: hidden;
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  /* Lapisan yang digeser saat efek "shake" - alert ikut bergetar,
+     tapi canvas confetti tidak, supaya partikelnya tetap lurus. */
+  #stage { position: absolute; inset: 0; }
+
+  #alerts {
+    position: absolute; top: 40px; left: 40px;
+    display: flex; flex-direction: column; gap: 14px;
+    max-width: 640px;
+  }
+  .alert {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 26px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(20,20,32,.92), rgba(45,25,70,.92));
+    border: 2px solid rgba(255,255,255,.18);
+    box-shadow: 0 10px 40px rgba(0,0,0,.45);
+    color: #fff;
+    animation: slidein .45s cubic-bezier(.2,.9,.3,1.3) forwards;
+  }
+  .alert.out { animation: slideout .4s ease forwards; }
+  .alert .icon { font-size: 40px; line-height: 1; }
+  .alert .body { display: flex; flex-direction: column; gap: 4px; }
+  .alert .title {
+    font-size: 26px; font-weight: 800; letter-spacing: .3px;
+    text-shadow: 0 2px 10px rgba(0,0,0,.6);
+  }
+  .alert .subtitle { font-size: 18px; opacity: .88; }
+
+  .alert.gift    { border-color: #ff4d94; }
+  .alert.comment { border-color: #4dd2ff; }
+  .alert.follow  { border-color: #7cff87; }
+  .alert.share   { border-color: #ffd24d; }
+  .alert.like    { border-color: #c58cff; }
+  .alert.danger  { border-color: #ff5252; background: linear-gradient(135deg, rgba(60,10,10,.94), rgba(90,20,20,.94)); }
+
+  @keyframes slidein {
+    from { opacity: 0; transform: translateX(-70px) scale(.94); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+  }
+  @keyframes slideout {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(-70px) scale(.94); }
+  }
+
+  /* ---- efek visual ---- */
+  #fx { position: absolute; inset: 0; pointer-events: none; }
+  #confetti { position: absolute; inset: 0; }
+
+  #flash {
+    position: absolute; inset: 0;
+    opacity: 0; background: #fff;
+    transition: opacity .12s ease-out;
+  }
+
+  .shaking { animation: shake .5s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-3px, 0, 0); }
+    20%, 80% { transform: translate3d(6px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-12px, 0, 0); }
+    40%, 60% { transform: translate3d(12px, 0, 0); }
+  }
+
+  .float-text {
+    position: absolute;
+    font-size: 44px; font-weight: 900; color: #fff;
+    text-shadow: 0 3px 14px rgba(0,0,0,.7);
+    animation: floatup 2.4s ease-out forwards;
+    white-space: nowrap;
+  }
+  @keyframes floatup {
+    0%   { opacity: 0; transform: translateY(30px) scale(.7); }
+    15%  { opacity: 1; transform: translateY(0) scale(1.1); }
+    30%  { transform: translateY(-10px) scale(1); }
+    100% { opacity: 0; transform: translateY(-180px) scale(1); }
+  }
+
+  .rain-item {
+    position: absolute; top: -60px;
+    font-size: 40px; line-height: 1;
+    animation: raindown linear forwards;
+  }
+  @keyframes raindown {
+    to { transform: translateY(115vh) rotate(var(--spin, 180deg)); }
+  }
+
+  #status {
+    position: absolute; bottom: 12px; right: 16px;
+    font-size: 12px; color: rgba(255,255,255,.35);
+    font-family: monospace;
+  }
+  #status.connected { color: rgba(120,255,140,.45); }
+  #status.warn { color: rgba(255,200,90,.75); }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <div id="alerts"></div>
+  </div>
+  <div id="fx">
+    <canvas id="confetti"></canvas>
+    <div id="flash"></div>
+  </div>
+  <div id="status">menyambung...</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var stageEl  = document.getElementById('stage');
+  var alertsEl = document.getElementById('alerts');
+  var fxEl     = document.getElementById('fx');
+  var flashEl  = document.getElementById('flash');
+  var statusEl = document.getElementById('status');
+  var canvas   = document.getElementById('confetti');
+  var ctx      = canvas.getContext('2d');
+
+  var MAX_ALERTS = 5;
+
+  var ICONS = {
+    gift: '\u{1F381}', comment: '\u{1F4AC}', follow: '\u{2764}\u{FE0F}',
+    share: '\u{1F517}', like: '\u{1F44D}', danger: '\u{26A0}\u{FE0F}', info: '\u{2728}'
+  };
+
+  // ------------------------------------------------------------- alert
+
+  function showAlert(data) {
+    var style = data.style || 'info';
+    var el = document.createElement('div');
+    el.className = 'alert ' + style;
+    el.innerHTML =
+      '<div class="icon"></div>' +
+      '<div class="body"><div class="title"></div>' +
+      (data.subtitle ? '<div class="subtitle"></div>' : '') + '</div>';
+
+    // textContent, bukan innerHTML - nama & komentar berasal dari penonton.
+    el.querySelector('.icon').textContent = data.icon || ICONS[style] || ICONS.info;
+    el.querySelector('.title').textContent = data.title || '';
+    if (data.subtitle) el.querySelector('.subtitle').textContent = data.subtitle;
+
+    alertsEl.appendChild(el);
+    while (alertsEl.children.length > MAX_ALERTS) alertsEl.removeChild(alertsEl.firstChild);
+
+    var duration = Math.max(500, Number(data.duration) || 5000);
+    setTimeout(function () {
+      el.classList.add('out');
+      setTimeout(function () { el.remove(); }, 400);
+    }, duration);
+  }
+
+  // ------------------------------------------------------------- audio
+
+  // Browser bisa memblokir autoplay. OBS Browser Source biasanya
+  // mengizinkannya; kalau diblokir kita beri tahu lewat status.
+  var audioBlocked = false;
+
+  function noteBlocked() {
+    if (audioBlocked) return;
+    audioBlocked = true;
+    statusEl.textContent = 'audio diblokir browser - klik halaman sekali';
+    statusEl.className = 'warn';
+  }
+
+  function playSound(data) {
+    if (!data.url) return;
+    var audio = new Audio(data.url);
+    audio.volume = clamp01(data.volume, 1);
+    // Lepas dari memori setelah selesai supaya tidak menumpuk.
+    audio.addEventListener('ended', function () { audio.src = ''; });
+    var p = audio.play();
+    if (p && p.catch) p.catch(noteBlocked);
+  }
+
+  var music = null;          // Audio yang sedang loop
+  var musicFade = null;      // interval fade yang sedang berjalan
+
+  function stopFade() {
+    if (musicFade) { clearInterval(musicFade); musicFade = null; }
+  }
+
+  function fadeTo(audio, target, ms, done) {
+    stopFade();
+    var steps = Math.max(1, Math.round(ms / 50));
+    var start = audio.volume;
+    var delta = (target - start) / steps;
+    var i = 0;
+    musicFade = setInterval(function () {
+      i++;
+      audio.volume = clamp01(start + delta * i, target);
+      if (i >= steps) {
+        stopFade();
+        audio.volume = clamp01(target, target);
+        if (done) done();
+      }
+    }, 50);
+  }
+
+  function handleMusic(data) {
+    var action = data.action || 'play';
+    var fadeMs = Math.max(0, Number(data.fade_ms) || 0);
+    var volume = clamp01(data.volume, 1);
+
+    if (action === 'stop') {
+      if (!music) return;
+      var old = music;
+      music = null;
+      if (fadeMs > 0) {
+        fadeTo(old, 0, fadeMs, function () { old.pause(); old.src = ''; });
+      } else {
+        stopFade(); old.pause(); old.src = '';
+      }
+      return;
+    }
+
+    if (action === 'volume') {
+      if (!music) return;
+      if (fadeMs > 0) fadeTo(music, volume, fadeMs);
+      else { stopFade(); music.volume = volume; }
+      return;
+    }
+
+    // action === 'play'
+    if (!data.url) return;
+    if (music) { stopFade(); music.pause(); music.src = ''; }
+
+    music = new Audio(data.url);
+    music.loop = data.loop !== false;      // musik latar default loop
+    music.volume = fadeMs > 0 ? 0 : volume;
+    var p = music.play();
+    if (p && p.catch) p.catch(noteBlocked);
+    if (fadeMs > 0) fadeTo(music, volume, fadeMs);
+  }
+
+  function clamp01(value, fallback) {
+    var n = Number(value);
+    if (isNaN(n)) n = fallback;
+    return Math.min(1, Math.max(0, n));
+  }
+
+  // ------------------------------------------------------------ efek
+
+  function sizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  sizeCanvas();
+  window.addEventListener('resize', sizeCanvas);
+
+  var particles = [];
+  var rafId = null;
+  var CONFETTI_COLORS = ['#ff4d94','#4dd2ff','#7cff87','#ffd24d','#c58cff','#ff8a4d'];
+
+  function spawnConfetti(count, colors) {
+    var palette = (colors && colors.length) ? colors : CONFETTI_COLORS;
+    for (var i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: -20 - Math.random() * canvas.height * 0.3,
+        vx: (Math.random() - 0.5) * 3,
+        vy: 2 + Math.random() * 4,
+        size: 6 + Math.random() * 8,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.25,
+        color: palette[(Math.random() * palette.length) | 0],
+        life: 1
+      });
+    }
+    startLoop();
+  }
+
+  function startLoop() {
+    if (rafId !== null) return;
+    var last = performance.now();
+    function frame(now) {
+      var dt = Math.min(64, now - last) / 16.67;   // normalisasi ke ~60fps
+      last = now;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (var i = particles.length - 1; i >= 0; i--) {
+        var p = particles[i];
+        p.vy += 0.06 * dt;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.rot += p.vr * dt;
+        if (p.y > canvas.height + 40) { particles.splice(i, 1); continue; }
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        ctx.restore();
+      }
+
+      if (particles.length === 0) {
+        // Berhenti total saat tidak ada partikel - jangan bakar CPU OBS.
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        rafId = null;
+        return;
+      }
+      rafId = requestAnimationFrame(frame);
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function doShake(intensity, duration) {
+    stageEl.classList.remove('shaking');
+    void stageEl.offsetWidth;                 // paksa reflow agar animasi ulang
+    stageEl.style.setProperty('--shake', intensity);
+    stageEl.style.animationDuration = (duration / 1000) + 's';
+    stageEl.classList.add('shaking');
+    setTimeout(function () { stageEl.classList.remove('shaking'); }, duration + 60);
+  }
+
+  function doFlash(color, duration) {
+    flashEl.style.background = color || '#ffffff';
+    flashEl.style.opacity = '0.85';
+    setTimeout(function () { flashEl.style.opacity = '0'; }, Math.max(60, duration));
+  }
+
+  function doFloatText(text, color) {
+    if (!text) return;
+    var el = document.createElement('div');
+    el.className = 'float-text';
+    el.textContent = text;                    // aman: teks dari penonton
+    if (color) el.style.color = color;
+    el.style.left = (10 + Math.random() * 60) + '%';
+    el.style.top = (40 + Math.random() * 30) + '%';
+    fxEl.appendChild(el);
+    setTimeout(function () { el.remove(); }, 2600);
+  }
+
+  function doRain(emoji, count) {
+    var symbol = emoji || '\u{1F381}';
+    var total = Math.min(80, Math.max(1, count || 20));
+    for (var i = 0; i < total; i++) {
+      (function (index) {
+        setTimeout(function () {
+          var el = document.createElement('div');
+          el.className = 'rain-item';
+          el.textContent = symbol;
+          el.style.left = (Math.random() * 96) + '%';
+          var dur = 2.5 + Math.random() * 2;
+          el.style.animationDuration = dur + 's';
+          el.style.setProperty('--spin', ((Math.random() - 0.5) * 720) + 'deg');
+          el.style.fontSize = (28 + Math.random() * 28) + 'px';
+          fxEl.appendChild(el);
+          setTimeout(function () { el.remove(); }, dur * 1000 + 200);
+        }, index * 60);
+      })(i);
+    }
+  }
+
+  function handleEffect(data) {
+    switch (data.effect) {
+      case 'confetti':
+        spawnConfetti(Math.min(400, Math.max(1, Number(data.count) || 80)), data.colors);
+        break;
+      case 'shake':
+        doShake(Number(data.intensity) || 1, Math.max(100, Number(data.duration) || 500));
+        break;
+      case 'flash':
+        doFlash(data.color, Math.max(60, Number(data.duration) || 150));
+        break;
+      case 'text':
+        doFloatText(data.text, data.color);
+        break;
+      case 'rain':
+        doRain(data.emoji, Number(data.count) || 20);
+        break;
+      default:
+        break;
+    }
+  }
+
+  function clearAll() {
+    alertsEl.innerHTML = '';
+    particles.length = 0;
+    Array.prototype.slice.call(fxEl.querySelectorAll('.float-text,.rain-item'))
+      .forEach(function (el) { el.remove(); });
+    if (music) { stopFade(); music.pause(); music.src = ''; music = null; }
+  }
+
+  // Klik sekali membuka blokir autoplay di browser biasa.
+  document.addEventListener('click', function () {
+    if (!audioBlocked) return;
+    audioBlocked = false;
+    statusEl.textContent = 'terhubung';
+    statusEl.className = 'connected';
+  });
+
+  // ------------------------------------------------------- websocket
+
+  var ws = null, retry = 1000;
+
+  // Channel diambil dari URL Browser Source, mis. /overlay?ch=alert
+  // Satu server melayani banyak overlay; tiap channel menerima pesannya
+  // sendiri, jadi gift berbeda bisa tampil di sumber OBS yang berbeda.
+  var CHANNEL = (function () {
+    try {
+      var raw = new URLSearchParams(location.search).get('ch') || '';
+      var clean = raw.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
+      return clean || 'main';
+    } catch (e) {
+      return 'main';
+    }
+  })();
+
+  function handle(data) {
+    switch (data.type) {
+      case 'alert':  showAlert(data); break;
+      case 'sound':  playSound(data); break;
+      case 'music':  handleMusic(data); break;
+      case 'effect': handleEffect(data); break;
+      case 'clear':  clearAll(); break;
+      default:
+        // Kompatibilitas: pesan lama tanpa "type" dianggap alert.
+        if (data.title) showAlert(data);
+    }
+  }
+
+  function connect() {
+    ws = new WebSocket('ws://' + location.host + '/ws?ch=' + encodeURIComponent(CHANNEL));
+
+    ws.onopen = function () {
+      retry = 1000;
+      if (!audioBlocked) {
+        statusEl.textContent = 'terhubung \u00b7 ' + CHANNEL;
+        statusEl.className = 'connected';
+      }
+    };
+
+    ws.onmessage = function (evt) {
+      var data;
+      try { data = JSON.parse(evt.data); } catch (e) { return; }
+      try { handle(data); } catch (e) { /* satu pesan rusak jangan mematikan overlay */ }
+    };
+
+    ws.onclose = function () {
+      statusEl.textContent = 'terputus, menyambung ulang...';
+      statusEl.className = '';
+      setTimeout(connect, retry);
+      retry = Math.min(retry * 1.6, 10000);
+    };
+
+    ws.onerror = function () { if (ws) ws.close(); };
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>
