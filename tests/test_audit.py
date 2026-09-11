@@ -26,9 +26,16 @@ from app.engine.rules import COMMON_CONDITIONS, CONDITION_SPECS
 from app.engine.template import context_from_event
 from app.models import LiveEvent
 
-for _register in (register_adb_actions, register_app_actions,
-                  register_game_actions, register_host_actions):
-    _register()
+@pytest.fixture(autouse=True)
+def _fresh_registry():
+    """Daftarkan ulang sebelum tiap test.
+
+    Test lain ada yang mengganti aksi sementara; audit harus memeriksa
+    pendaftaran yang sebenarnya, bukan sisa milik test sebelumnya.
+    """
+    for register in (register_adb_actions, register_app_actions,
+                     register_game_actions, register_host_actions):
+        register()
 
 MODULES = {"adb": adb_mod, "app": apps_mod, "game": game_mod,
            "overlay": host_mod, "host": host_mod}

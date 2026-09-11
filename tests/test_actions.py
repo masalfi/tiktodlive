@@ -29,14 +29,27 @@ def fake_actions():
         calls.append(("danger", params))
         return ActionResult("adb.reboot", True, "reboot")
 
+    # adb.reboot sudah terdaftar sungguhan; simpan dulu supaya bisa
+    # dipulihkan. Menghapusnya begitu saja membuat test lain yang
+    # memeriksa daftar aksi ikut gagal.
+    saved = {
+        t: (REGISTRY.get(t), HANDLERS.get(t))
+        for t in ("test.ok", "test.fail", "test.boom", "adb.reboot")
+    }
+
     register(ActionSpec("test.ok", "OK", "adb", [ParamSpec("x", "X", "int", 1)]), handler)
     register(ActionSpec("test.fail", "Fail", "adb"), failing)
     register(ActionSpec("test.boom", "Boom", "adb"), boom)
     register(ActionSpec("adb.reboot", "Reboot", "adb", dangerous=True), danger)
     yield calls
-    for t in ("test.ok", "test.fail", "test.boom", "adb.reboot"):
-        REGISTRY.pop(t, None)
-        HANDLERS.pop(t, None)
+
+    for t, (spec, fn) in saved.items():
+        if spec is None:
+            REGISTRY.pop(t, None)
+            HANDLERS.pop(t, None)
+        else:
+            REGISTRY[t] = spec
+            HANDLERS[t] = fn
 
 
 def make_queue(safety=None, max_queue=50):
@@ -70,14 +83,14 @@ def test_coerce_applies_defaults_and_types():
     ]), lambda c, p: ActionResult("tmp.c", True))
     out = coerce_params("tmp.c", {"n": "42", "b": "true"})
     assert out == {"n": 42, "f": 1.5, "b": True, "s": "hi"}
-    REGISTRY.pop("tmp.c"); HANDLERS.pop("tmp.c")
+    REGISTRY.pop("tmp.c", None); HANDLERS.pop("tmp.c", None)
 
 
 def test_coerce_bad_value_falls_back_to_default():
     register(ActionSpec("tmp.d", "D", "adb", [ParamSpec("n", "N", "int", 9)]),
              lambda c, p: ActionResult("tmp.d", True))
     assert coerce_params("tmp.d", {"n": "bukan angka"}) == {"n": 9}
-    REGISTRY.pop("tmp.d"); HANDLERS.pop("tmp.d")
+    REGISTRY.pop("tmp.d", None); HANDLERS.pop("tmp.d", None)
 
 
 # --------------------------------------------------------------- safety
