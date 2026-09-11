@@ -345,3 +345,63 @@ def test_consistent_mrotation_used():
             return super().run(args, timeout, binary)
 
     assert current_rotation(Consistent()) == 1
+
+
+# ------------------------------------------------- template Pixel 4
+
+def test_pixel4_template_is_complete():
+    """Template hasil kalibrasi dari perangkat nyata harus lengkap dan
+    berada di dalam layar."""
+    from app.config import load_games
+
+    profiles = load_games().get("profiles", {})
+    profile = profiles.get("pixel4_ml")
+    if profile is None:
+        pytest.skip("template pixel4_ml tidak ada di config")
+
+    assert profile["landscape"] is True
+    assert profile["calibrated"] is True
+
+    wajib = {
+        "joystick", "attack", "recall", "minimap",
+        "skill1", "skill2", "skill3", "ultimate", "spell",
+    }
+    assert wajib <= set(profile["buttons"]), wajib - set(profile["buttons"])
+
+    for name, point in profile["buttons"].items():
+        assert 0.0 < point["x"] < 1.0, f"{name} x di luar layar"
+        assert 0.0 < point["y"] < 1.0, f"{name} y di luar layar"
+
+
+def test_pixel4_aliases_match_their_targets():
+    """skill1/skill2/skill3 hanyalah nama lain dari tombol yang terlihat -
+    kalau tidak sama, rule akan menekan tempat berbeda dari yang dikira."""
+    from app.config import load_games
+
+    profile = load_games().get("profiles", {}).get("pixel4_ml")
+    if profile is None:
+        pytest.skip("template pixel4_ml tidak ada")
+
+    buttons = profile["buttons"]
+    for alias, target in [("skill1", "mobility"), ("skill2", "burst"),
+                          ("skill3", "aoe"), ("ultimate", "aoe"),
+                          ("spell", "flicker")]:
+        assert buttons[alias] == buttons[target], f"{alias} tidak sama dengan {target}"
+
+
+def test_pixel4_buttons_resolve_to_sane_pixels():
+    """Di layar 2280x1080, tombol harus jatuh di area yang masuk akal."""
+    from app.config import load_games
+
+    profile = load_games().get("profiles", {}).get("pixel4_ml")
+    if profile is None:
+        pytest.skip("template pixel4_ml tidak ada")
+
+    adb = FakeAdb(1080, 2280, rotation=1)          # Pixel 4 mendatar
+    joystick = resolve_point(adb, profile, "joystick")
+    attack = resolve_point(adb, profile, "attack")
+    minimap = resolve_point(adb, profile, "minimap")
+
+    assert joystick[0] < 1140, "joystick harus di paruh kiri"
+    assert attack[0] > 1140, "tombol serang harus di paruh kanan"
+    assert minimap[1] < 540, "minimap harus di paruh atas"

@@ -155,6 +155,13 @@ class GamePanel(QWidget):
         self.queue = queue
         self.games = load_games()
         self._worker: ScreenshotWorker | None = None
+        self._dirty = False
+        try:
+            from app.config import GAMES_PATH
+
+            self._games_mtime = GAMES_PATH.stat().st_mtime if GAMES_PATH.exists() else 0.0
+        except OSError:
+            self._games_mtime = 0.0
 
         root = QVBoxLayout(self)
         root.setSpacing(8)
@@ -339,7 +346,37 @@ class GamePanel(QWidget):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        self.reload_if_changed()
         self.refresh_orientation()
+
+    def reload_if_changed(self) -> None:
+        """Baca ulang profil kalau file berubah di luar aplikasi.
+
+        Tanpa ini, aplikasi memegang salinan dari saat start dan akan
+        MENIMPA perubahan yang dibuat langsung di
+        config/game_profiles.yaml begitu kamu menekan Simpan.
+        """
+        from app.config import GAMES_PATH
+
+        try:
+            stamp = GAMES_PATH.stat().st_mtime if GAMES_PATH.exists() else 0.0
+        except OSError:
+            return
+        if stamp == getattr(self, "_games_mtime", None):
+            return
+
+        self._games_mtime = stamp
+        if getattr(self, "_dirty", False):
+            # Ada perubahan yang belum disimpan - jangan buang diam-diam.
+            self._report(
+                False,
+                "File profil berubah di luar aplikasi, tapi ada perubahan "
+                "yang belum kamu simpan. Simpan atau buka ulang aplikasi.",
+            )
+            return
+
+        self.games = load_games()
+        self._reload_profiles()
 
     def _refresh_markers(self) -> None:
         buttons = self.current_profile().get("buttons") or {}
@@ -427,6 +464,7 @@ class GamePanel(QWidget):
             profile["landscape"] = shot[0] > shot[1]
             profile["calib_size"] = f"{shot[0]}x{shot[1]}"
 
+        self._dirty = True
         self._refresh_markers()
         self._report(True, f"'{name}' disetel ke {px:.3f}, {py:.3f} — klik Simpan untuk menyimpan.")
 
@@ -464,6 +502,13 @@ class GamePanel(QWidget):
         except OSError as exc:
             self._report(False, f"Gagal menyimpan: {exc}")
             return
+        self._dirty = False
+        try:
+            from app.config import GAMES_PATH
+
+            self._games_mtime = GAMES_PATH.stat().st_mtime
+        except OSError:
+            pass
         self._report(True, "Profil disimpan ke config/game_profiles.yaml")
         self.profile_changed.emit()
 
