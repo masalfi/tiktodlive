@@ -53,12 +53,13 @@ class GiftPicker(QWidget):
         self.combo = QComboBox()
         self.combo.setEditable(True)                # tetap bisa ketik manual
         self.combo.setInsertPolicy(QComboBox.NoInsert)
-        self.combo.setMinimumWidth(180)
+        self.combo.setMinimumWidth(130)
         self.combo.currentTextChanged.connect(self._on_changed)
         layout.addWidget(self.combo, 1)
 
-        self.refresh_button = QPushButton("Segarkan")
+        self.refresh_button = QPushButton("\u27f3")          # simbol segarkan
         self.refresh_button.setToolTip("Ambil daftar gift terbaru dari TikTok")
+
         # Lebar mengikuti teks + padding; angka piksel tetap akan terpotong
         # saat font OS lebih besar (macOS 13pt vs Windows 9pt).
         self.refresh_button.setSizePolicy(
@@ -105,9 +106,10 @@ class GiftPicker(QWidget):
         self.combo.setCompleter(completer)
 
         if CATALOG.is_empty:
-            self.status.setText("katalog kosong")
+            self.status.setText("0")
         else:
-            self.status.setText(f"{len(CATALOG)} gift")
+            self.status.setText(str(len(CATALOG)))
+            self.status.setToolTip(f"{len(CATALOG)} gift di katalog")
 
         if current:
             self.set_value(current)
@@ -160,7 +162,7 @@ class GiftPicker(QWidget):
         if self._worker and self._worker.isRunning():
             return
         self.refresh_button.setEnabled(False)
-        self.status.setText("mengambil...")
+        self.status.setText("...")
 
         self._worker = GiftFetchWorker()
         self._worker.finished_ok.connect(self._on_fetched)
@@ -170,10 +172,11 @@ class GiftPicker(QWidget):
 
     def _on_fetched(self, count: int) -> None:
         self.reload_items()
-        self.status.setText(f"{count} gift (baru)")
+        self.status.setText(str(count))
+        self.status.setToolTip(f"{count} gift, baru disegarkan")
 
     def _on_failed(self, message: str) -> None:
-        self.status.setText("gagal - pakai daftar lama")
+        self.status.setText("!")
         self.status.setToolTip(message)
 
     def closeEvent(self, event) -> None:

@@ -34,7 +34,7 @@ CONDITION_SPECS: dict[str, list[tuple[str, str, str]]] = {
 }
 
 # Berlaku untuk semua jenis event
-COMMON_CONDITIONS = [("from_user", "Hanya dari user (pisah koma)", "str")]
+COMMON_CONDITIONS = [("from_user", "Hanya dari user", "str")]
 
 
 def _as_int(value: Any) -> int | None:

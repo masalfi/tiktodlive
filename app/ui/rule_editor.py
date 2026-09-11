@@ -7,6 +7,7 @@ from typing import Any
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -55,13 +56,26 @@ class RuleEditor(QDialog):
     def __init__(self, rule: Rule | None = None, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Edit Rule" if rule else "Rule Baru")
-        self.resize(1060, 700)
+        self._fit_to_screen()
 
         # Salin supaya batal tidak mengubah rule asli.
         self.rule = copy.deepcopy(rule) if rule else Rule(name="Rule baru")
         self._cond_widgets: dict[str, QWidget] = {}
 
-        root = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        # Isi dialog cukup tinggi (Rule + Kondisi/Aksi + Pengaman). Tanpa
+        # area gulir, tinggi minimumnya melebihi layar laptop dan tombol
+        # Simpan terdorong keluar sehingga tidak bisa diklik.
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        content = QWidget()
+        root = QVBoxLayout(content)
 
         # ---- identitas
         head = QGroupBox("Rule")
@@ -99,7 +113,7 @@ class RuleEditor(QDialog):
         action_layout = QVBoxLayout(action_box)
 
         self.action_list = QListWidget()
-        self.action_list.setMinimumHeight(90)
+        self.action_list.setMinimumHeight(80)
         self.action_list.currentRowChanged.connect(self._on_action_selected)
         action_layout.addWidget(self.action_list, 1)
 
@@ -129,7 +143,7 @@ class RuleEditor(QDialog):
         self.param_scroll.setWidgetResizable(True)
         self.param_scroll.setFrameShape(QScrollArea.NoFrame)
         self.param_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.param_scroll.setMinimumHeight(190)
+        self.param_scroll.setMinimumHeight(170)
         self.param_form = ParamForm()
         self.param_scroll.setWidget(self.param_form)
         action_layout.addWidget(self.param_scroll, 1)
@@ -145,6 +159,10 @@ class RuleEditor(QDialog):
         action_layout.addLayout(delay_row)
 
         splitter.addWidget(action_box)
+        # Tanpa minimum kecil, kedua panel memaksa dialog jadi sangat
+        # lebar dan isinya terpotong di laptop.
+        cond_box.setMinimumWidth(300)
+        action_box.setMinimumWidth(300)
         splitter.setSizes([420, 620])
         root.addWidget(splitter, 1)
 
@@ -165,19 +183,61 @@ class RuleEditor(QDialog):
         self.max_hour_spin.setSpecialValueText("tanpa batas")
         safe_form.addRow("Maks per jam:", self.max_hour_spin)
 
-        self.confirm_check = QCheckBox("Minta konfirmasi untuk aksi berbahaya (reboot, shell, script)")
+        self.confirm_check = QCheckBox("Minta konfirmasi dulu")
+        self.confirm_check.setToolTip(
+            "Untuk aksi berbahaya seperti reboot, shell, atau jalankan script")
         self.confirm_check.setChecked(self.rule.require_confirm)
         safe_form.addRow("", self.confirm_check)
 
         root.addWidget(safe_box)
 
+        scroll.setWidget(content)
+        outer.addWidget(scroll, 1)
+        self._scroll_content = content
+
+        # Tombol di luar area gulir supaya selalu terlihat.
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.setContentsMargins(10, 6, 10, 10)
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
-        root.addWidget(buttons)
+        outer.addWidget(buttons)
 
         self._rebuild_conditions()
         self._reload_action_list()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._lock_content_height()
+
+    def _lock_content_height(self) -> None:
+        """Kunci tinggi minimum isi area gulir.
+
+        Tanpa ini QScrollArea memampatkan kotak "Aksi" dan "Pengaman"
+        alih-alih menampilkan scrollbar penuh.
+        """
+        content = getattr(self, "_scroll_content", None)
+        if content is None:
+            return
+        needed = content.layout().sizeHint().height()
+        if needed != content.minimumHeight():
+            content.setMinimumHeight(needed)
+
+    def _fit_to_screen(self) -> None:
+        """Pilih ukuran yang pasti muat di layar pengguna.
+
+        Laptop 13 inci sering hanya punya ~900px ruang vertikal; dialog
+        yang lebih tinggi membuat tombol Simpan tidak terjangkau.
+        """
+        screen = self.screen() or QApplication.primaryScreen()
+        area = screen.availableGeometry() if screen else None
+        if area is None:
+            self.resize(980, 620)
+            return
+
+        width = min(1040, int(area.width() * 0.92))
+        height = min(700, int(area.height() * 0.88))
+        self.resize(width, height)
+        self.setMaximumHeight(area.height())
 
     # ------------------------------------------------------------- kondisi
 
@@ -221,6 +281,8 @@ class RuleEditor(QDialog):
                 widget = GiftPicker(str(value) if value is not None else "")
             else:
                 widget = QLineEdit(str(value) if value is not None else "")
+                if name == "from_user":
+                    widget.setPlaceholderText("kosong = semua; pisah koma untuk beberapa")
             self._cond_widgets[name] = widget
             self.cond_form.addRow(f"{label}:", widget)
 
