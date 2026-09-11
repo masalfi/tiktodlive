@@ -283,6 +283,25 @@ beserta hasilnya.
 
 ## Daftar Aksi
 
+Saat membuat rule, aksi dikelompokkan supaya mudah ditelusuri:
+
+| Kelompok | Isi |
+|---|---|
+| **Overlay (tampil di OBS)** | Notifikasi, suara, musik, hujan, confetti, teks melayang, getar, kilat |
+| **Kontrol HP** | Tap, swipe, tombol, ketik, volume, brightness, rotasi, screenshot, wifi, reboot, shell |
+| **Aplikasi di HP** | Tutup/mulai ulang game, buka/tutup aplikasi, bersihkan latar |
+| **Game** | Tekan tombol, tahan, combo, skill terarah, gerakkan hero |
+| **Komputer** | Tunggu, suara PC, tombol PC, scrcpy, jalankan script |
+
+Dalam tiap kelompok, aksi yang paling sering dipakai ada di atas. Aksi
+berbahaya ditandai ⚠.
+
+> **Untuk hujan berdasarkan gift:** pilih **Overlay → Hujan (emoji / ikon
+> gift / gambar)**, lalu setel *Hujan pakai* = **gift**. Biarkan kolom
+> *ID gift* berisi `{gift_id}` — itu terisi sendiri dari gift yang masuk.
+
+
+
 ### Di HP (ADB)
 | Aksi | Keterangan |
 |---|---|
@@ -309,7 +328,8 @@ beserta hasilnya.
 | Tekan tombol di PC | butuh izin Accessibility di macOS |
 | **Suara di overlay** | efek suara lewat OBS Browser Source (bisa pilih channel) |
 | **Musik latar overlay** | musik loop dengan fade in/out |
-| **Efek visual overlay** | confetti, getar, kilat, teks, hujan emoji |
+| **Hujan** | emoji, ikon gift yang masuk, atau gambar pilihan |
+| **Confetti / Teks melayang / Getar / Kilat** | masing-masing jadi aksi sendiri |
 | Jalankan scrcpy | memakai pengaturan dari tab scrcpy |
 | Hentikan scrcpy | menutup jendela scrcpy |
 | Tunggu | jeda di tengah rangkaian aksi |

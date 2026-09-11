@@ -341,6 +341,25 @@ def _h_overlay_effect(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
                          str(p.get("channel") or ""))
 
 
+def _effect_handler(effect: str, action_type: str):
+    """Buat handler untuk satu jenis efek.
+
+    Sebelumnya semua efek berbagi satu aksi "Efek visual overlay" dengan
+    kolom yang tidak semuanya relevan - pengguna harus menebak mana yang
+    berlaku. Sekarang tiap efek punya aksinya sendiri dengan kolom yang
+    memang dipakai saja.
+    """
+
+    def handler(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
+        merged = dict(p)
+        merged["effect"] = effect
+        result = _h_overlay_effect(host, merged)
+        result.action_type = action_type
+        return result
+
+    return handler
+
+
 def _h_launch_scrcpy(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     from app.scrcpy.bridge import ScrcpyOptions
@@ -389,61 +408,113 @@ def _h_wait(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
 # --------------------------------------------------------------- registrasi
 
 def register_host_actions() -> None:
+    CHANNEL = ParamSpec(
+        "channel", "Channel overlay", "str", "",
+        help="kosong = overlay utama; isi mis. 'alert' untuk Browser Source terpisah",
+    )
+
+    # ---------------------------------------------------------- overlay
     register(
-        ActionSpec("host.overlay", "Tampilkan overlay (OBS)", "host", [
+        ActionSpec("host.overlay", "Notifikasi teks", "overlay", [
             ParamSpec("title", "Judul", "str", ""),
             ParamSpec("subtitle", "Subjudul", "str", ""),
             ParamSpec("style", "Gaya", "choice", "gift",
                       choices=["gift", "comment", "follow", "share", "like", "danger", "info"]),
             ParamSpec("duration_ms", "Durasi (ms)", "int", 5000),
-            ParamSpec("channel", "Channel overlay", "str", "",
-                      help="kosong = overlay utama; isi mis. 'alert' untuk Browser Source terpisah"),
-        ], help="Gunakan {user}, {gift}, {count}, {coins}, {comment} sebagai placeholder"),
+            CHANNEL,
+        ], order=10, help="Placeholder: {user}, {gift}, {count}, {coins}, {comment}"),
         _h_overlay,
     )
     register(
-        ActionSpec("host.overlay_sound", "Suara di overlay (OBS)", "host", [
+        ActionSpec("host.overlay_sound", "Suara", "overlay", [
             ParamSpec("file", "File audio", "file", "", help="mp3/wav/ogg - path lengkap"),
             ParamSpec("volume", "Volume (0-1)", "float", 1.0),
-            ParamSpec("channel", "Channel overlay", "str", "",
-                      help="kosong = overlay utama; isi mis. 'alert' untuk Browser Source terpisah"),
-        ], help="Diputar di overlay, jadi OBS menangkapnya tanpa setel Desktop Audio"),
+            CHANNEL,
+        ], order=20, help="Diputar di overlay, jadi OBS menangkapnya tanpa Desktop Audio"),
         _h_overlay_sound,
     )
     register(
-        ActionSpec("host.overlay_music", "Musik latar overlay", "host", [
+        ActionSpec("host.overlay_music", "Musik latar", "overlay", [
             ParamSpec("action", "Aksi", "choice", "play", choices=["play", "stop", "volume"]),
             ParamSpec("file", "File audio", "file", "", help="hanya untuk aksi 'play'"),
             ParamSpec("volume", "Volume (0-1)", "float", 0.5),
             ParamSpec("fade_ms", "Fade (ms)", "int", 800),
             ParamSpec("loop", "Ulangi terus", "bool", True),
-            ParamSpec("channel", "Channel overlay", "str", "",
-                      help="kosong = overlay utama; isi mis. 'alert' untuk Browser Source terpisah"),
-        ], help="Musik latar yang loop; 'stop' untuk menghentikan dengan fade"),
+            CHANNEL,
+        ], order=30, help="Musik yang diulang; 'stop' menghentikannya dengan fade"),
         _h_overlay_music,
     )
+
+    # --- efek visual: satu aksi per efek, bukan satu aksi serba guna ---
     register(
-        ActionSpec("host.overlay_effect", "Efek visual overlay", "host", [
+        ActionSpec("overlay.rain", "Hujan (emoji / ikon gift / gambar)", "overlay", [
+            ParamSpec("sumber", "Hujan pakai", "choice", "gift",
+                      choices=["gift", "emoji", "gambar"],
+                      help="gift = ikon gift yang memicu rule ini"),
+            ParamSpec("emoji", "Emoji", "str", "\U0001F381",
+                      help="dipakai kalau sumber = emoji"),
+            ParamSpec("file", "Gambar", "file", "",
+                      help="dipakai kalau sumber = gambar"),
+            ParamSpec("count", "Jumlah", "int", 25),
+            ParamSpec("size_px", "Ukuran (px)", "int", 56),
+            ParamSpec("gift_id", "ID gift", "str", "{gift_id}",
+                      help="biarkan {gift_id} - terisi otomatis dari gift yang masuk"),
+            CHANNEL,
+        ], order=40, help="Sumber 'gift': ikon gift yang memicu rule ini yang berjatuhan"),
+        _effect_handler("rain", "overlay.rain"),
+    )
+    register(
+        ActionSpec("overlay.confetti", "Confetti", "overlay", [
+            ParamSpec("count", "Jumlah", "int", 80),
+            CHANNEL,
+        ], order=50),
+        _effect_handler("confetti", "overlay.confetti"),
+    )
+    register(
+        ActionSpec("overlay.text", "Teks melayang", "overlay", [
+            ParamSpec("text", "Teks", "str", "{user}"),
+            ParamSpec("color", "Warna", "str", "#ffd24d"),
+            CHANNEL,
+        ], order=60, help="Placeholder {user}, {gift}, {count} bisa dipakai"),
+        _effect_handler("text", "overlay.text"),
+    )
+    register(
+        ActionSpec("overlay.shake", "Layar bergetar", "overlay", [
+            ParamSpec("duration_ms", "Durasi (ms)", "int", 600),
+            CHANNEL,
+        ], order=70),
+        _effect_handler("shake", "overlay.shake"),
+    )
+    register(
+        ActionSpec("overlay.flash", "Kilat warna", "overlay", [
+            ParamSpec("color", "Warna", "str", "#ffffff"),
+            ParamSpec("duration_ms", "Durasi (ms)", "int", 150),
+            CHANNEL,
+        ], order=80),
+        _effect_handler("flash", "overlay.flash"),
+    )
+
+    # Aksi lama: tetap jalan untuk rule yang sudah ada, tapi tidak
+    # ditampilkan lagi karena sudah digantikan lima aksi di atas.
+    register(
+        ActionSpec("host.overlay_effect", "Efek visual overlay (lama)", "overlay", [
             ParamSpec("effect", "Efek", "choice", "confetti",
                       choices=["confetti", "shake", "flash", "text", "rain"]),
-            ParamSpec("count", "Jumlah (confetti/rain)", "int", 80),
-            ParamSpec("duration_ms", "Durasi (shake/flash)", "int", 500),
-            ParamSpec("color", "Warna (flash/text)", "str", "#ffffff"),
-            ParamSpec("text", "Teks (efek text)", "str", ""),
-            ParamSpec("sumber", "Hujan pakai apa", "choice", "emoji",
-                      choices=["emoji", "gift", "gambar"],
-                      help="gift = ikon gift yang memicu rule ini"),
-            ParamSpec("emoji", "Emoji (kalau sumber=emoji)", "str", "\U0001F381"),
-            ParamSpec("file", "File gambar (kalau sumber=gambar)", "file", "",
-                      help="png/jpg/gif/webp - path lengkap"),
-            ParamSpec("gift_id", "ID gift (isi otomatis)", "str", "{gift_id}",
-                      help="biarkan {gift_id} agar mengikuti gift yang masuk"),
+            ParamSpec("count", "Jumlah", "int", 80),
+            ParamSpec("duration_ms", "Durasi (ms)", "int", 500),
+            ParamSpec("color", "Warna", "str", "#ffffff"),
+            ParamSpec("text", "Teks", "str", ""),
+            ParamSpec("sumber", "Hujan pakai", "choice", "emoji",
+                      choices=["emoji", "gift", "gambar"]),
+            ParamSpec("emoji", "Emoji", "str", "\U0001F381"),
+            ParamSpec("file", "File gambar", "file", ""),
+            ParamSpec("gift_id", "ID gift", "str", "{gift_id}"),
             ParamSpec("size_px", "Ukuran (px)", "int", 44),
-            ParamSpec("channel", "Channel overlay", "str", "",
-                      help="kosong = overlay utama; isi mis. 'alert' untuk Browser Source terpisah"),
-        ], help="Placeholder {user}, {gift}, {count} bisa dipakai di teks"),
+            CHANNEL,
+        ], hidden=True),
         _h_overlay_effect,
     )
+
     register(
         ActionSpec("host.sound", "Mainkan suara di PC", "host", [
             ParamSpec("file", "File", "file", "", help="Nama file di assets/sfx atau path lengkap"),

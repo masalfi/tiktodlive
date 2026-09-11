@@ -74,7 +74,9 @@ class ParamForm(QWidget):
             hint = QLabel(spec.help)
             hint.setWordWrap(True)
             hint.setProperty("class", "hint")
-            self._layout.addRow("", hint)
+            # Satu argumen = membentang dua kolom. Kalau dimasukkan ke
+            # kolom kanan, teksnya terjepit dan sulit dibaca.
+            self._layout.addRow(hint)
 
         for p in spec.params:
             current = values.get(p.name, p.default)

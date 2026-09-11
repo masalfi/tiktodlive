@@ -18,8 +18,10 @@ from PySide6.QtWidgets import (
 
 from app.actions.base import HANDLERS, coerce_params, get_spec, specs_by_category
 
-# Label kategori supaya jelas aksi berjalan di mana.
-CATEGORY_PREFIX = {"adb": "[HP]", "app": "[APP]", "game": "[GAME]", "host": "[PC]"}
+from app.ui.action_picker import (
+    current_action_type,
+    fill_action_combo,
+)
 from app.ui.param_form import ParamForm
 from app.ui.theme import DANGER, OK, TEXT_DIM
 
@@ -100,12 +102,7 @@ class DevicesPanel(QWidget):
     # ---------------------------------------------------------------- helper
 
     def _fill_actions(self) -> None:
-        self.action_combo.clear()
-        for category, specs in sorted(specs_by_category().items()):
-            for spec in specs:
-                prefix = CATEGORY_PREFIX.get(category, "[PC]")
-                warn = " (!)" if spec.dangerous else ""
-                self.action_combo.addItem(f"{prefix} {spec.label}{warn}", spec.type)
+        fill_action_combo(self.action_combo)
 
     def refresh(self) -> None:
         if not self.adb.available:
@@ -141,11 +138,11 @@ class DevicesPanel(QWidget):
             self._update_active()
 
     def _on_action_changed(self) -> None:
-        spec = get_spec(self.action_combo.currentData())
+        spec = get_spec(current_action_type(self.action_combo))
         self.form.set_spec(spec)
 
     def _run(self) -> None:
-        action_type = self.action_combo.currentData()
+        action_type = current_action_type(self.action_combo)
         spec = get_spec(action_type)
         if spec is None:
             return

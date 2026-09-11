@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QListWidgetItem,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QSpinBox,
     QSplitter,
     QVBoxLayout,
@@ -29,12 +30,15 @@ from PySide6.QtWidgets import (
 
 from app.actions.base import get_spec, specs_by_category
 
-# Label kategori supaya jelas aksi berjalan di mana.
-CATEGORY_PREFIX = {"adb": "[HP]", "app": "[APP]", "game": "[GAME]", "host": "[PC]"}
 from app.engine.rules import COMMON_CONDITIONS, CONDITION_SPECS
 from app.models import Action, Rule
 from app.ui.gift_picker import GiftPicker
 from app.ui.param_form import ParamForm
+from app.ui.action_picker import (
+    current_action_type,
+    fill_action_combo,
+    select_action,
+)
 from app.ui.theme import DANGER, OK, TEXT_DIM
 
 EVENT_LABELS = {
@@ -51,7 +55,7 @@ class RuleEditor(QDialog):
     def __init__(self, rule: Rule | None = None, parent=None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Edit Rule" if rule else "Rule Baru")
-        self.resize(900, 620)
+        self.resize(1060, 700)
 
         # Salin supaya batal tidak mengubah rule asli.
         self.rule = copy.deepcopy(rule) if rule else Rule(name="Rule baru")
@@ -95,7 +99,7 @@ class RuleEditor(QDialog):
         action_layout = QVBoxLayout(action_box)
 
         self.action_list = QListWidget()
-        self.action_list.setMinimumHeight(110)
+        self.action_list.setMinimumHeight(90)
         self.action_list.currentRowChanged.connect(self._on_action_selected)
         action_layout.addWidget(self.action_list, 1)
 
@@ -119,8 +123,16 @@ class RuleEditor(QDialog):
         pick_row.addWidget(self.action_type_combo, 1)
         action_layout.addLayout(pick_row)
 
+        # Jumlah kolom berbeda jauh antar aksi (Tunggu punya 1, Hujan
+        # punya 7). Tanpa area gulir, aksi berkolom banyak terhimpit.
+        self.param_scroll = QScrollArea()
+        self.param_scroll.setWidgetResizable(True)
+        self.param_scroll.setFrameShape(QScrollArea.NoFrame)
+        self.param_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.param_scroll.setMinimumHeight(190)
         self.param_form = ParamForm()
-        action_layout.addWidget(self.param_form)
+        self.param_scroll.setWidget(self.param_form)
+        action_layout.addWidget(self.param_scroll, 1)
 
         delay_row = QHBoxLayout()
         delay_row.addWidget(QLabel("Jeda setelah aksi ini (detik):"))
@@ -133,7 +145,7 @@ class RuleEditor(QDialog):
         action_layout.addLayout(delay_row)
 
         splitter.addWidget(action_box)
-        splitter.setSizes([380, 560])
+        splitter.setSizes([420, 620])
         root.addWidget(splitter, 1)
 
         # ---- pengaman
@@ -243,12 +255,7 @@ class RuleEditor(QDialog):
     # ---------------------------------------------------------------- aksi
 
     def _fill_action_types(self) -> None:
-        self.action_type_combo.clear()
-        for category, specs in sorted(specs_by_category().items()):
-            for spec in specs:
-                prefix = CATEGORY_PREFIX.get(category, "[PC]")
-                warn = " (!)" if spec.dangerous else ""
-                self.action_type_combo.addItem(f"{prefix} {spec.label}{warn}", spec.type)
+        fill_action_combo(self.action_type_combo)
 
     def _reload_action_list(self, select: int | None = None) -> None:
         self.action_list.blockSignals(True)
@@ -274,10 +281,8 @@ class RuleEditor(QDialog):
         if row < 0 or row >= len(self.rule.actions):
             return
         action = self.rule.actions[row]
-        index = self.action_type_combo.findData(action.type)
-
         self.action_type_combo.blockSignals(True)
-        self.action_type_combo.setCurrentIndex(index if index >= 0 else 0)
+        select_action(self.action_type_combo, action.type)
         self.action_type_combo.blockSignals(False)
 
         self.param_form.set_spec(get_spec(action.type), action.params)
@@ -290,7 +295,7 @@ class RuleEditor(QDialog):
         row = self._current_index()
         if row < 0 or row >= len(self.rule.actions):
             return
-        new_type = self.action_type_combo.currentData()
+        new_type = current_action_type(self.action_type_combo)
         self.rule.actions[row].type = new_type
         self.rule.actions[row].params = {}
         self.param_form.set_spec(get_spec(new_type))
@@ -306,7 +311,7 @@ class RuleEditor(QDialog):
 
     def _add_action(self) -> None:
         self._save_current_action()
-        action_type = self.action_type_combo.currentData() or "adb.tap"
+        action_type = current_action_type(self.action_type_combo) or "adb.tap"
         self.rule.actions.append(Action(type=action_type, params={}))
         self._reload_action_list(len(self.rule.actions) - 1)
 

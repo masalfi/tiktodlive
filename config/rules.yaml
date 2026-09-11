@@ -5,9 +5,8 @@ rules:
   event_kind: gift
   conditions: {}
   actions:
-  - type: host.overlay_effect
+  - type: overlay.rain
     params:
-      effect: rain
       sumber: gift
       gift_id: '{gift_id}'
       count: 25
@@ -39,9 +38,8 @@ rules:
       duration_ms: 4000
       channel: alert
     delay_after: 0.0
-  - type: host.overlay_effect
+  - type: overlay.confetti
     params:
-      effect: confetti
       count: 60
       channel: alert
     delay_after: 0.0
@@ -136,22 +134,19 @@ rules:
   conditions:
     min_coins: 500
   actions:
-  - type: host.overlay_effect
+  - type: overlay.rain
     params:
-      effect: rain
       emoji: 🌹
       count: 40
       channel: efek
     delay_after: 0.0
-  - type: host.overlay_effect
+  - type: overlay.shake
     params:
-      effect: shake
       duration_ms: 700
       channel: efek
     delay_after: 0.0
-  - type: host.overlay_effect
+  - type: overlay.text
     params:
-      effect: text
       text: '{user} kirim {gift}!'
       color: '#ffd24d'
       channel: efek
@@ -217,9 +212,8 @@ rules:
       button: recall
       duration_ms: 1500
     delay_after: 0.0
-  - type: host.overlay_effect
+  - type: overlay.text
     params:
-      effect: text
       text: '{user} menyuruh RECALL!'
       color: '#4dd2ff'
       channel: efek
@@ -234,9 +228,8 @@ rules:
   conditions:
     min_coins: 1000
   actions:
-  - type: host.overlay_effect
+  - type: overlay.shake
     params:
-      effect: shake
       duration_ms: 600
       channel: efek
     delay_after: 0.0
@@ -342,9 +335,8 @@ rules:
   conditions:
     starts_with: '!hujan'
   actions:
-  - type: host.overlay_effect
+  - type: overlay.rain
     params:
-      effect: rain
       sumber: gambar
       file: ''
       count: 30

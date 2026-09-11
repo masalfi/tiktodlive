@@ -85,27 +85,77 @@ def test_vendor_adb_none_when_missing(tmp_path, monkeypatch):
 
 # ------------------------------------------------------ audit integrasi
 
+def _types_in(combo):
+    from app.ui.action_picker import TYPE_ROLE
+
+    return {
+        combo.itemData(row, TYPE_ROLE)
+        for row in range(combo.count())
+        if combo.itemData(row, TYPE_ROLE)
+    }
+
+
 def test_every_action_has_handler_and_appears_in_ui(window):
-    """Aksi yang terdaftar tapi tidak muncul di UI = tidak bisa dipakai."""
+    """Aksi yang terdaftar tapi tidak muncul di UI = tidak bisa dipakai.
+
+    Kecuali aksi yang sengaja disembunyikan (sudah ada penggantinya) -
+    itu tetap harus punya handler supaya rule lama tidak rusak.
+    """
     from app.actions.base import HANDLERS, REGISTRY
     from app.ui.rule_editor import RuleEditor
 
-    if True:
-        editor = RuleEditor(parent=window)
-        in_editor = {
-            editor.action_type_combo.itemData(i)
-            for i in range(editor.action_type_combo.count())
-        }
-        in_devices = {
-            window.devices_panel.action_combo.itemData(i)
-            for i in range(window.devices_panel.action_combo.count())
-        }
-        editor.close()
+    editor = RuleEditor(parent=window)
+    in_editor = _types_in(editor.action_type_combo)
+    in_devices = _types_in(window.devices_panel.action_combo)
+    editor.close()
 
-        for action_type in REGISTRY:
-            assert action_type in HANDLERS, f"{action_type} tanpa handler"
-            assert action_type in in_editor, f"{action_type} tidak ada di editor rule"
-            assert action_type in in_devices, f"{action_type} tidak ada di tes manual"
+    for action_type, spec in REGISTRY.items():
+        assert action_type in HANDLERS, f"{action_type} tanpa handler"
+        if spec.hidden:
+            continue
+        assert action_type in in_editor, f"{action_type} tidak ada di editor rule"
+        assert action_type in in_devices, f"{action_type} tidak ada di tes manual"
+
+
+def test_hidden_actions_still_work(window):
+    """Rule lama memakai aksi yang kini disembunyikan - handler-nya wajib
+    tetap ada, kalau tidak rule pengguna mendadak rusak."""
+    from app.actions.base import HANDLERS, REGISTRY
+
+    hidden = [t for t, s in REGISTRY.items() if s.hidden]
+    assert hidden, "harusnya ada aksi lama yang disembunyikan"
+    for action_type in hidden:
+        assert action_type in HANDLERS
+
+
+def test_action_groups_are_labelled(window):
+    """Daftar aksi harus punya judul kelompok, bukan 39 baris datar."""
+    from app.actions.base import CATEGORY_LABEL, grouped_specs
+
+    groups = grouped_specs()
+    assert len(groups) >= 4
+    titles = [title for title, _ in groups]
+    assert titles[0] == CATEGORY_LABEL["overlay"]      # paling sering dipakai
+    for _, specs in groups:
+        assert specs, "kelompok kosong tidak boleh ditampilkan"
+
+
+def test_group_headers_not_selectable(window):
+    """Judul kelompok yang bisa dipilih akan menghasilkan aksi kosong."""
+    from app.ui.rule_editor import RuleEditor
+
+    editor = RuleEditor(parent=window)
+    combo = editor.action_type_combo
+    model = combo.model()
+    headers = [
+        row for row in range(combo.count())
+        if not combo.itemData(row, __import__("app.ui.action_picker",
+                                              fromlist=["TYPE_ROLE"]).TYPE_ROLE)
+    ]
+    assert headers, "tidak ada judul kelompok"
+    for row in headers:
+        assert not model.item(row).isEnabled()
+    editor.close()
 
 
 def test_every_param_gets_a_widget(window):
