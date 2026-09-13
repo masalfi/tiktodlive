@@ -140,7 +140,7 @@ def _h_restart(adb, p: dict[str, Any]) -> ActionResult:
     time.sleep(delay)
     result = _launch(adb, package, "app.restart", started)
     if result.ok:
-        return _ok("app.restart", started, f"{package} dimulai ulang")
+        return _ok("app.restart", started, tr("{package} dimulai ulang", package=package))
     return result
 
 
@@ -224,7 +224,8 @@ def _h_clear_background(adb, p: dict[str, Any]) -> ActionResult:
 
     kept = ", ".join(sorted(keep)) or "-"
     return _ok("app.clear_background", started,
-               f"{closed} aplikasi latar ditutup (dibiarkan: {kept})")
+               tr("{n} aplikasi latar ditutup (dibiarkan: {kecuali})",
+                  n=closed, kecuali=kept))
 
 
 # --------------------------------------------------------------- registrasi

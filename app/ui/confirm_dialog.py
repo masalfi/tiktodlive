@@ -36,9 +36,9 @@ class _ConfirmBridge(QObject):
             if remaining[0] <= 0:
                 box.reject()          # auto-cancel: diam = tidak jalan
             else:
-                box.setInformativeText(f"Batal otomatis dalam {remaining[0]} detik...")
+                box.setInformativeText(tr("Batal otomatis dalam {detik} detik...", detik=remaining[0]))
 
-        box.setInformativeText(f"Batal otomatis dalam {remaining[0]} detik...")
+        box.setInformativeText(tr("Batal otomatis dalam {detik} detik...", detik=remaining[0]))
         timer = QTimer(box)
         timer.timeout.connect(tick)
         timer.start(1000)

@@ -167,7 +167,7 @@ class RuleEngine:
             while times and now - times[0] > 3600:
                 times.popleft()
             if len(times) >= rule.max_per_hour:
-                return False, f"limit {rule.max_per_hour}/jam tercapai"
+                return False, tr("limit {maks}/jam tercapai", maks=rule.max_per_hour)
 
         return True, ""
 

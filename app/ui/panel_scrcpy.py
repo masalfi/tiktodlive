@@ -163,7 +163,7 @@ class ScrcpyPanel(QWidget):
 
     def _redownload(self) -> None:
         confirm = QMessageBox.question(
-            self, "Unduh ulang",
+            self, tr("Unduh ulang"),
             tr("Hapus scrcpy yang ada lalu unduh versi terbaru?"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
@@ -278,10 +278,10 @@ class ScrcpyPanel(QWidget):
 
         size_row = QHBoxLayout()
         self.win_w_spin = QSpinBox(); self.win_w_spin.setRange(0, 4000)
-        self.win_w_spin.setValue(o.window_width); self.win_w_spin.setSpecialValueText("otomatis")
+        self.win_w_spin.setValue(o.window_width); self.win_w_spin.setSpecialValueText(tr("otomatis"))
         self.win_w_spin.valueChanged.connect(self._collect)
         self.win_h_spin = QSpinBox(); self.win_h_spin.setRange(0, 4000)
-        self.win_h_spin.setValue(o.window_height); self.win_h_spin.setSpecialValueText("otomatis")
+        self.win_h_spin.setValue(o.window_height); self.win_h_spin.setSpecialValueText(tr("otomatis"))
         self.win_h_spin.valueChanged.connect(self._collect)
         size_row.addWidget(self.win_w_spin); size_row.addWidget(QLabel("x")); size_row.addWidget(self.win_h_spin)
         size_row.addStretch(1)
@@ -289,10 +289,10 @@ class ScrcpyPanel(QWidget):
 
         pos_row = QHBoxLayout()
         self.win_x_spin = QSpinBox(); self.win_x_spin.setRange(-1, 4000)
-        self.win_x_spin.setValue(o.window_x); self.win_x_spin.setSpecialValueText("otomatis")
+        self.win_x_spin.setValue(o.window_x); self.win_x_spin.setSpecialValueText(tr("otomatis"))
         self.win_x_spin.valueChanged.connect(self._collect)
         self.win_y_spin = QSpinBox(); self.win_y_spin.setRange(-1, 4000)
-        self.win_y_spin.setValue(o.window_y); self.win_y_spin.setSpecialValueText("otomatis")
+        self.win_y_spin.setValue(o.window_y); self.win_y_spin.setSpecialValueText(tr("otomatis"))
         self.win_y_spin.valueChanged.connect(self._collect)
         pos_row.addWidget(self.win_x_spin); pos_row.addWidget(QLabel(",")); pos_row.addWidget(self.win_y_spin)
         pos_row.addStretch(1)
@@ -307,7 +307,7 @@ class ScrcpyPanel(QWidget):
         self.screen_off_check = self._check(tr("Matikan layar HP saat mulai"), o.turn_screen_off)
         form.addRow("", self.screen_off_check)
 
-        self.stay_awake_check = self._check("Cegah HP tidur", o.stay_awake)
+        self.stay_awake_check = self._check(tr("Cegah HP tidur"), o.stay_awake)
         form.addRow("", self.stay_awake_check)
 
         self.show_touches_check = self._check(tr("Tampilkan sentuhan di layar HP"), o.show_touches)

@@ -46,17 +46,18 @@ class LiveEvent:
         """Ringkasan satu baris untuk panel log."""
         who = self.nickname or self.username or "?"
         if self.kind == "gift":
-            return f"{who} mengirim {self.repeat_count}x {self.gift_name} ({self.total_coins} koin)"
+            return tr("{siapa} mengirim {jumlah}x {gift} ({koin} koin)", siapa=who,
+                      jumlah=self.repeat_count, gift=self.gift_name, koin=self.total_coins)
         if self.kind == "comment":
             return f"{who}: {self.comment}"
         if self.kind == "like":
-            return f"{who} memberi {self.like_count} like"
+            return tr("{siapa} memberi {jumlah} like", siapa=who, jumlah=self.like_count)
         if self.kind == "follow":
-            return f"{who} mem-follow"
+            return tr("{siapa} mem-follow", siapa=who)
         if self.kind == "share":
-            return f"{who} membagikan live"
+            return tr("{siapa} membagikan live", siapa=who)
         if self.kind == "join":
-            return f"{who} bergabung"
+            return tr("{siapa} bergabung", siapa=who)
         return f"{who} - {self.kind}"
 
 

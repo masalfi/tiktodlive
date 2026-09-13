@@ -143,7 +143,7 @@ class ActionQueue:
                     self._emit(job, index, ActionResult(action.type, False, tr("Butuh konfirmasi, tidak ada handler")))
                     return
                 if not self.confirm_handler(job.rule, action.type):
-                    self._emit(job, index, ActionResult(action.type, False, "Dibatalkan user"))
+                    self._emit(job, index, ActionResult(action.type, False, tr("Dibatalkan user")))
                     return
 
             handler = HANDLERS.get(action.type)
@@ -157,7 +157,7 @@ class ActionQueue:
                 result = handler(target, params)
             except Exception as exc:                # noqa: BLE001
                 log.exception("Aksi %s error", action.type)
-                result = ActionResult(action.type, False, f"Error: {exc}")
+                result = ActionResult(action.type, False, tr("Error: {sebab}", sebab=exc))
 
             if result.ok:
                 self.safety.note_action(action.type)

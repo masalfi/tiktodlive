@@ -175,7 +175,7 @@ class GiftPicker(QWidget):
     def _on_fetched(self, count: int) -> None:
         self.reload_items()
         self.status.setText(str(count))
-        self.status.setToolTip(f"{count} gift, baru disegarkan")
+        self.status.setToolTip(tr("{n} gift, baru disegarkan", n=count))
 
     def _on_failed(self, message: str) -> None:
         self.status.setText("!")

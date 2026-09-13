@@ -34,6 +34,8 @@ from app.overlay.server import DEFAULT_CHANNEL
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM, WARN
 
 AUDIO_FILTER = "Audio (*.mp3 *.wav *.ogg *.m4a *.aac *.flac *.opus);;Semua file (*)"
+#: Dipakai lewat tr() di tempat pemakaian, bukan di sini - modul ini
+#: diimpor sebelum bahasa dipasang.
 
 EFFECTS = [
     ("confetti", "Confetti"),
@@ -191,7 +193,7 @@ class OverlayPanel(QWidget):
         self.channel_combo.clear()
         for name in names:
             count = connected.get(name, 0)
-            label = f"{name}  ({count} terbuka)" if count else name
+            label = tr("{channel}  ({n} terbuka)", channel=name, n=count) if count else name
             self.channel_combo.addItem(label, name)
         self.channel_combo.blockSignals(False)
 
@@ -250,7 +252,7 @@ class OverlayPanel(QWidget):
     def _copy_url(self) -> None:
         url = self.overlay.channel_url(self.current_channel())
         QApplication.clipboard().setText(url)
-        self._report(True, f"URL disalin: {url}")
+        self._report(True, tr("URL disalin: {url}", url=url))
 
     def _clear_overlay(self) -> None:
         if not self.overlay.running:
@@ -260,7 +262,8 @@ class OverlayPanel(QWidget):
 
         name = normalize_channel(self.current_channel())
         sent = self.overlay.send({"type": "clear"}, self.current_channel())
-        self._report(True, f"Channel '{name}' dibersihkan ({sent} overlay).")
+        self._report(True, tr("Channel '{channel}' dibersihkan ({n} overlay).",
+                              channel=name, n=sent))
 
     def _clear_all_channels(self) -> None:
         if not self.overlay.running:
@@ -269,7 +272,7 @@ class OverlayPanel(QWidget):
         from app.overlay.server import ALL_CHANNELS
 
         sent = self.overlay.send({"type": "clear"}, ALL_CHANNELS)
-        self._report(True, f"Semua channel dibersihkan ({sent} overlay).")
+        self._report(True, tr("Semua channel dibersihkan ({n} overlay).", n=sent))
 
     # ------------------------------------------------------------- audio
 
@@ -377,7 +380,7 @@ class OverlayPanel(QWidget):
 
     def _browse(self, target: QLineEdit) -> None:
         start = str(Path(target.text()).parent) if target.text().strip() else str(Path.home())
-        path, _ = QFileDialog.getOpenFileName(self, tr("Pilih file audio"), start, AUDIO_FILTER)
+        path, _ = QFileDialog.getOpenFileName(self, tr("Pilih file audio"), start, tr(AUDIO_FILTER))
         if path:
             target.setText(path)
             self._save()
@@ -390,7 +393,7 @@ class OverlayPanel(QWidget):
 
         self.effect_combo = QComboBox()
         for value, label in EFFECTS:
-            self.effect_combo.addItem(label, value)
+            self.effect_combo.addItem(tr(label), value)
         index = self.effect_combo.findData(saved.get("effect", "confetti"))
         self.effect_combo.setCurrentIndex(index if index >= 0 else 0)
         self.effect_combo.currentIndexChanged.connect(self._on_effect_changed)
@@ -415,7 +418,7 @@ class OverlayPanel(QWidget):
         self.color_edit.editingFinished.connect(self._save)
         form.addRow(tr("Warna:"), self.color_edit)
 
-        self.text_edit = QLineEdit(saved.get("effect_text", "Terima kasih!"))
+        self.text_edit = QLineEdit(saved.get("effect_text", tr("Terima kasih!")))
         self.text_edit.editingFinished.connect(self._save)
         form.addRow(tr("Teks:"), self.text_edit)
 
@@ -575,8 +578,8 @@ class OverlayPanel(QWidget):
 
     def _test_alert(self) -> None:
         self._run("host.overlay", {
-            "title": "Budi mengirim 5x Rose",
-            "subtitle": "5 koin",
+            "title": tr("Budi mengirim 5x Rose"),
+            "subtitle": tr("5 koin"),
             "style": "gift",
             "duration_ms": 4000, "channel": self.current_channel(),
         })

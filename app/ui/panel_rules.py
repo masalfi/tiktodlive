@@ -92,9 +92,9 @@ class RulesPanel(QWidget):
         self.table.setRowCount(len(self.rules))
         for row, rule in enumerate(self.rules):
             values = [
-                "ya" if rule.enabled else "-",
+                tr("ya") if rule.enabled else "-",
                 rule.name,
-                EVENT_LABELS.get(rule.event_kind, rule.event_kind),
+                tr(EVENT_LABELS.get(rule.event_kind, rule.event_kind)),
                 rule.summary_conditions(),
                 str(len(rule.actions)),
                 f"{rule.cooldown_sec:g}s" if rule.cooldown_sec else "-",
@@ -140,7 +140,7 @@ class RulesPanel(QWidget):
             return
         clone = copy.deepcopy(self.rules[row])
         clone.id = uuid.uuid4().hex[:8]      # id baru supaya cooldown terpisah
-        clone.name = f"{clone.name} (salinan)"
+        clone.name = tr("{nama} (salinan)", nama=clone.name)
         self.rules.insert(row + 1, clone)
         self._commit()
 

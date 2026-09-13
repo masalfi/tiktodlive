@@ -155,7 +155,7 @@ class ParamForm(QWidget):
                     completer.setCaseSensitivity(Qt.CaseInsensitive)
                     completer.setFilterMode(Qt.MatchContains)
                     widget.setCompleter(completer)
-                    widget.lineEdit().setPlaceholderText(f"{len(packages)} aplikasi terdeteksi")
+                    widget.lineEdit().setPlaceholderText(tr("{n} aplikasi terdeteksi", n=len(packages)))
                 else:
                     widget.lineEdit().setPlaceholderText(tr("mis. com.mobile.legends"))
                 widget.setCurrentText(str(current) if current else "")

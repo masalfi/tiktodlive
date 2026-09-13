@@ -19,6 +19,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
+from app.i18n import tr
+
 from app.config import CONFIG_DIR
 
 log = logging.getLogger(__name__)
@@ -47,8 +49,9 @@ class Gift:
 
     def label(self) -> str:
         """Teks untuk dropdown, mis. 'Rose - 1 koin (streak)'."""
-        suffix = " (streak)" if self.streakable else ""
-        return f"{self.name} - {self.diamond_count} koin{suffix}"
+        suffix = tr(" (streak)") if self.streakable else ""
+        return tr("{nama} - {koin} koin{streak}",
+                  nama=self.name, koin=self.diamond_count, streak=suffix)
 
 
 def _icon_url(item: dict[str, Any]) -> str:

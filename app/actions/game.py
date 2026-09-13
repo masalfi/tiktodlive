@@ -374,7 +374,7 @@ def _h_combo(adb, p: dict[str, Any]) -> ActionResult:
         if gap:
             time.sleep(gap / 1000)
 
-    return _ok("game.combo", started, f"combo: {' -> '.join(done)}")
+    return _ok("game.combo", started, tr("combo: {urutan}", urutan=" -> ".join(done)))
 
 
 # --------------------------------------------------------------- registrasi

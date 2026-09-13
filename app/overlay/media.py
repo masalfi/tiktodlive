@@ -140,7 +140,8 @@ class MediaRegistry:
             raise MediaError(tr("File kosong: {nama}", nama=path.name))
         if size > MAX_BYTES:
             raise MediaError(
-                f"File terlalu besar ({size / 1048576:.0f} MB, maks {MAX_BYTES // 1048576} MB)"
+                tr("File terlalu besar ({mb} MB, maks {maks} MB)",
+                   mb=f"{size / 1048576:.0f}", maks=MAX_BYTES // 1048576)
             )
 
         key = str(path)

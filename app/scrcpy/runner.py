@@ -74,7 +74,7 @@ class ScrcpyRunner:
         except subprocess.TimeoutExpired:
             self._procs[key] = proc
             self._last[key] = (scrcpy_path, options, serial, adb_path)
-            return True, "scrcpy berjalan."
+            return True, tr("scrcpy berjalan.")
 
         output = ""
         if proc.stdout is not None:
@@ -83,7 +83,8 @@ class ScrcpyRunner:
             except Exception:                       # noqa: BLE001
                 pass
         tail = output.splitlines()[-3:] if output else []
-        return False, "scrcpy berhenti: " + (" | ".join(tail) or f"exit {proc.returncode}")
+        return False, tr("scrcpy berhenti: {sebab}",
+                         sebab=" | ".join(tail) or f"exit {proc.returncode}")
 
     def stop(self, serial: str = "") -> bool:
         key = serial or "_default"

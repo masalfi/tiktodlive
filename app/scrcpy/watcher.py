@@ -107,7 +107,7 @@ class DeviceWatcher(QThread):
                 waited = time.time() - self._lost_at if self._lost_at else 0
                 self._state = ONLINE
                 self.state_changed.emit(
-                    ONLINE, f"Device kembali online setelah {waited:.0f} detik"
+                    ONLINE, tr("Device kembali online setelah {detik} detik", detik=f"{waited:.0f}")
                 )
                 self.device_back.emit(self.serial)
 
@@ -135,7 +135,7 @@ class DeviceWatcher(QThread):
                 else:
                     if self._state != RECONNECTING:
                         self._state = RECONNECTING
-                        self.state_changed.emit(RECONNECTING, "Menunggu device kembali...")
+                        self.state_changed.emit(RECONNECTING, tr("Menunggu device kembali..."))
                     self._try_reconnect_wireless()
 
             # Tidur bertahap supaya stop() cepat direspons.

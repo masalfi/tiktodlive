@@ -62,10 +62,8 @@ class SafetyGate:
                 while self._reboot_times and now - self._reboot_times[0] > 3600:
                     self._reboot_times.popleft()
                 if len(self._reboot_times) >= self.reboot_max_per_hour:
-                    return False, (
-                        f"batas keamanan reboot tercapai "
-                        f"({self.reboot_max_per_hour}/jam)"
-                    )
+                    return False, tr("batas keamanan reboot tercapai ({maks}/jam)",
+                                     maks=self.reboot_max_per_hour)
         return True, ""
 
     def note_action(self, action_type: str) -> None:

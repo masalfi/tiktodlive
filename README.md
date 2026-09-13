@@ -671,6 +671,19 @@ Teks baru masuk ke setiap `locales/*.json` dengan nilai kosong, dan teks
 yang sudah tidak dipakai dipindahkan ke bagian `_tidak_dipakai` — tidak
 dibuang, supaya terjemahan tidak hilang kalau nanti teksnya dipakai lagi.
 
+Kalau ada teks yang lupa dibungkus, `tests/test_i18n.py` akan gagal dan
+menyebutkan berkas serta nomor barisnya. Untuk teks yang memang bukan
+untuk pengguna — gema perintah adb, pesan log, nama program — tambahkan
+ke `SENGAJA_TIDAK_DITERJEMAHKAN` di berkas test itu, lengkap dengan
+alasannya.
+
+**Label di tabel tingkat-modul** (`EFFECTS`, `EVENT_LABELS`, `_COLORS`)
+ditulis sebagai teks biasa, lalu dibungkus `tr()` di tempat ditampilkan.
+Modul-modul itu diimpor sebelum bahasa dipasang, jadi `tr()` di tempat
+pendefinisian akan mengunci bahasa pada saat impor. Kalau kamu menambah
+tabel semacam itu, daftarkan juga di `from_ui_tables()` supaya ikut
+terkumpul.
+
 ---
 
 ## Test

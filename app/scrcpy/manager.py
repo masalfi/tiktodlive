@@ -185,7 +185,7 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
         if progress:
             progress(message, percent)
 
-    report("Mengambil info rilis scrcpy...", -1)
+    report(tr("Mengambil info rilis scrcpy..."), -1)
     release = fetch_release()
     asset = pick_asset(release)
     if asset is None:
@@ -201,7 +201,7 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
     VENDOR_DIR.mkdir(parents=True, exist_ok=True)
     archive = VENDOR_DIR / name
 
-    report(f"Mengunduh {name} ({total / 1048576:.1f} MB)...", 0)
+    report(tr("Mengunduh {nama} ({mb} MB)...", nama=name, mb=f"{total / 1048576:.1f}"), 0)
     digest = hashlib.sha256()
     got = 0
     try:
@@ -214,7 +214,9 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
                         digest.update(chunk)
                         got += len(chunk)
                         if total:
-                            report(f"Mengunduh... {got / 1048576:.1f}/{total / 1048576:.1f} MB",
+                            report(tr("Mengunduh... {sudah}/{total} MB",
+                                      sudah=f"{got / 1048576:.1f}",
+                                      total=f"{total / 1048576:.1f}"),
                                    int(got * 100 / total))
     except Exception as exc:                        # noqa: BLE001
         archive.unlink(missing_ok=True)
@@ -227,11 +229,11 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
         if actual.lower() != expected.lower():
             archive.unlink(missing_ok=True)
             raise RuntimeError(tr("Checksum tidak cocok - unduhan rusak atau tidak asli."))
-        report("Checksum cocok.", 100)
+        report(tr("Checksum cocok."), 100)
     else:
         log.warning("SHA256SUMS.txt tidak tersedia, verifikasi dilewati")
 
-    report("Mengekstrak...", 100)
+    report(tr("Mengekstrak..."), 100)
     try:
         _extract(archive, VENDOR_DIR)
     finally:
@@ -242,7 +244,7 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
         raise RuntimeError(tr("Ekstraksi selesai tapi binary scrcpy tidak ditemukan."))
 
     _make_executable(Path(info.path))
-    report(f"Selesai: {info.version or 'scrcpy siap'}", 100)
+    report(tr("Selesai: {versi}", versi=info.version or tr("scrcpy siap")), 100)
     return info
 
 
@@ -261,7 +263,7 @@ def _safe_extract_zip(zf: zipfile.ZipFile, dest: Path) -> None:
     for member in zf.namelist():
         target = (dest / member).resolve()
         if not str(target).startswith(str(root)):
-            raise RuntimeError(f"Entri arsip mencurigakan: {member}")
+            raise RuntimeError(tr("Entri arsip mencurigakan: {entri}", entri=member))
     zf.extractall(dest)
 
 
@@ -270,7 +272,7 @@ def _safe_extract_tar(tf: tarfile.TarFile, dest: Path) -> None:
     for member in tf.getmembers():
         target = (dest / member.name).resolve()
         if not str(target).startswith(str(root)):
-            raise RuntimeError(f"Entri arsip mencurigakan: {member.name}")
+            raise RuntimeError(tr("Entri arsip mencurigakan: {entri}", entri=member.name))
     tf.extractall(dest)
 
 

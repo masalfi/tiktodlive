@@ -394,12 +394,12 @@ class GamePanel(QWidget):
 
     def _take_screenshot(self) -> None:
         if not self.adb.available:
-            self._report(False, "adb tidak ditemukan.")
+            self._report(False, tr("adb tidak ditemukan."))
             return
         if self._worker is not None and self._worker.isRunning():
             return
         self.shot_button.setEnabled(False)
-        self._report(True, "Mengambil screenshot...")
+        self._report(True, tr("Mengambil screenshot..."))
 
         self._worker = ScreenshotWorker(self.adb)
         self._worker.done.connect(self._on_screenshot)
@@ -414,8 +414,9 @@ class GamePanel(QWidget):
         self._refresh_markers()
 
         shot = self.view.image_size()
-        orientation = "mendatar" if shot and shot[0] > shot[1] else "tegak"
-        notes = [f"Screenshot {shot[0]}x{shot[1]} ({orientation})." if shot else "Screenshot diambil."]
+        orientation = tr("mendatar") if shot and shot[0] > shot[1] else tr("tegak")
+        notes = [tr("Screenshot {w}x{h} ({arah}).", w=shot[0], h=shot[1], arah=orientation)
+                 if shot else tr("Screenshot diambil.")]
 
         # Game MOBA dimainkan mendatar; kalibrasi dari layar tegak hampir
         # pasti salah, jadi peringatkan sebelum user menghabiskan waktu.

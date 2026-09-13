@@ -407,7 +407,7 @@ def _h_wait(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     seconds = max(0.0, min(60.0, float(p.get("seconds", 1.0))))
     time.sleep(seconds)
-    return _ok("host.wait", started, f"tunggu {seconds}s")
+    return _ok("host.wait", started, tr("tunggu {detik}s", detik=seconds))
 
 
 # --------------------------------------------------------------- registrasi
@@ -536,7 +536,7 @@ def register_host_actions() -> None:
     )
     register(
         ActionSpec("host.keypress", "Tekan tombol di PC", "host", [
-            ParamSpec("key", "Tombol", "str", "f1", help=f"Contoh: a, f1, {', '.join(SPECIAL_KEYS[:6])}"),
+            ParamSpec("key", "Tombol", "str", "f1", help="Contoh: a, f1, f2, f3, space, enter, esc"),
             ParamSpec("modifiers", "Modifier (pisah koma)", "str", "", help="ctrl, alt, shift, cmd"),
         ], help="macOS butuh izin Accessibility untuk aplikasi ini"),
         _h_keypress,

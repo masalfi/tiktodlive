@@ -241,7 +241,8 @@ class MainWindow(QMainWindow):
         self.safety.set_device_ready(False)
         dropped = self.queue.clear()
         if dropped:
-            self.log_panel.add_system(f"{dropped} aksi dibatalkan karena device offline.")
+            self.log_panel.add_system(
+                tr("{n} aksi dibatalkan karena device offline.", n=dropped))
 
         # scrcpy pasti ikut mati; ingat serial mana yang tadi berjalan supaya
         # bisa dijalankan lagi. Serial dari signal bisa kosong, jadi pakai
@@ -282,7 +283,7 @@ class MainWindow(QMainWindow):
                 return
             self.log_panel.add_system(tr("Katalog gift sudah lama, menyegarkan..."))
         else:
-            self.log_panel.add_system("Mengambil daftar gift TikTok...")
+            self.log_panel.add_system(tr("Mengambil daftar gift TikTok..."))
 
         # Ambil di background supaya window tetap responsif.
         self._gift_worker = GiftFetchWorker()
@@ -291,7 +292,7 @@ class MainWindow(QMainWindow):
         self._gift_worker.start()
 
     def _on_gifts_fetched(self, count: int) -> None:
-        self.log_panel.add_system(f"Katalog gift diperbarui: {count} gift")
+        self.log_panel.add_system(tr("Katalog gift diperbarui: {n} gift", n=count))
         self.gifts_panel.reload()
 
     def _on_gifts_failed(self, message: str) -> None:
@@ -420,7 +421,8 @@ class MainWindow(QMainWindow):
         self.result_ready.emit(job, index, result)
 
     def _on_job_start(self, job: Job) -> None:
-        self.log_panel.add_system(f"[{job.rule.name}] terpicu oleh {job.event.display()}")
+        self.log_panel.add_system(
+            tr("[{rule}] terpicu oleh {event}", rule=job.rule.name, event=job.event.display()))
 
     def _on_result(self, job: Job, index: int, result: ActionResult) -> None:
         self.log_panel.add_result(job, index, result)
@@ -509,7 +511,7 @@ class MainWindow(QMainWindow):
                     seen.add(name)
             sisa = [n for n in sorted(buttons) if n not in seen]
             if sisa:
-                rows.append(("", "— Lainnya —"))
+                rows.append(("", tr("— Lainnya —")))
                 rows.extend(row(n) for n in sisa)
             return rows
 
@@ -578,7 +580,7 @@ class MainWindow(QMainWindow):
         if self.tabs.currentWidget() is getattr(self, "home_panel", None):
             self.home_panel.refresh()
         if self.overlay.running:
-            self.overlay_label.setText(f"Overlay: {self.overlay.client_count} klien")
+            self.overlay_label.setText(tr("Overlay: {n} klien", n=self.overlay.client_count))
             if self.tabs.currentWidget() is self.overlay_panel:
                 self.overlay_panel.refresh_status()
         else:

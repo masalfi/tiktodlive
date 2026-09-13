@@ -136,7 +136,8 @@ def _run_guarded(adb: AdbExecutor, action_type: str, args: list[str], success_ms
     # adb shell sering exit 0 walau perintah di device gagal; tampilkan stderr.
     stderr = (proc.stderr or "").strip()
     if stderr:
-        return _ok(action_type, started, f"{success_msg} (catatan: {stderr})")
+        return _ok(action_type, started,
+                   tr("{pesan} (catatan: {catatan})", pesan=success_msg, catatan=stderr))
     return _ok(action_type, started, success_msg)
 
 
@@ -260,7 +261,7 @@ def _h_rotate(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     result = _run_guarded(
         adb, "adb.rotate",
         ["shell", "settings", "put", "system", "user_rotation", str(rot)],
-        f"rotasi {rot * 90} derajat",
+        tr("rotasi {derajat} derajat", derajat=rot * 90),
     )
     result.duration_ms = int((time.time() - started) * 1000)
     return result

@@ -54,12 +54,23 @@ def from_source_files() -> set[str]:
     for path in sorted((ROOT / "app").rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"))
         for node in ast.walk(tree):
-            if not isinstance(node, ast.Call) or _call_name(node) not in UI_CALLS:
+            if not isinstance(node, ast.Call):
+                continue
+            name = _call_name(node)
+            if name not in UI_CALLS:
                 continue
             for arg in node.args:
-                if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
-                    if _looks_translatable(arg.value):
+                if not (isinstance(arg, ast.Constant) and isinstance(arg.value, str)):
+                    continue
+                if name == "tr":
+                    # Sudah ditandai programmer secara eksplisit; tidak ada
+                    # gunanya menebak-nebak lagi, cukup ada hurufnya.
+                    if any(ch.isalpha() for ch in arg.value):
                         found.add(arg.value)
+                elif _looks_translatable(arg.value):
+                    # Konstruktor Qt juga menerima warna, nama channel, dan
+                    # simbol seperti "x" - itu harus disaring.
+                    found.add(arg.value)
     return found
 
 
@@ -87,6 +98,27 @@ def from_action_specs() -> set[str]:
     return {v for v in found if _looks_translatable(v)}
 
 
+def from_ui_tables() -> set[str]:
+    """Tabel label tingkat-modul di UI.
+
+    Isinya dibungkus tr() di tempat pemakaian, bukan di tempat
+    pendefinisian - modul-modul ini diimpor sebelum bahasa dipasang, jadi
+    tr() di sana akan mengunci bahasa saat impor. Akibatnya pemindai
+    berbasis pemanggilan tidak melihatnya, jadi dikumpulkan di sini.
+    """
+    from app.actions.host import NO_LISTENER
+    from app.ui.panel_connect import _COLORS
+    from app.ui.panel_overlay import AUDIO_FILTER, EFFECTS
+    from app.ui.rule_editor import EVENT_LABELS
+
+    found = {label for _, label in EFFECTS}
+    found |= set(EVENT_LABELS.values())
+    found |= {label for _, label in _COLORS.values()}
+    found.add(AUDIO_FILTER)
+    found.add(NO_LISTENER)
+    return {v for v in found if _looks_translatable(v)}
+
+
 def from_conditions() -> set[str]:
     from app.engine.rules import COMMON_CONDITIONS, CONDITION_SPECS
 
@@ -95,19 +127,39 @@ def from_conditions() -> set[str]:
     return {v for v in found if _looks_translatable(v)}
 
 
+#: Placeholder dibuang dulu sebelum menilai bentuk teks - pesan yang
+#: dimulai dengan "{nama} ..." tetap teks untuk dibaca manusia.
+_PLACEHOLDER = re.compile(r"\{\w+\}")
+
+
 def _looks_translatable(value: str) -> bool:
+    """Apakah teks ini perlu diterjemahkan?
+
+    Dipakai untuk label yang dikumpulkan dari tabel/spec. Literal yang
+    sudah dibungkus tr() tidak melewati saringan ini: programmer sudah
+    menyatakan niatnya, jadi tidak ada gunanya menebak-nebak lagi.
+    """
     if not any(ch.isalpha() for ch in value):
         return False
+    bare = _PLACEHOLDER.sub("", value).strip()
+    if not bare:
+        return False                                # hanya placeholder
     # Buang hal teknis: path, kode warna, nama package, keycode.
-    if value.startswith(("#", "/", "http", "com.", "KEYCODE_", "{")):
+    if bare.startswith(("#", "/", "http", "com.", "KEYCODE_")):
         return False
-    if re.fullmatch(r"[a-z0-9_.\-]+", value):       # kunci/identifier
+    # Satu kata ASCII huruf kecil tanpa tanda baca kalimat hampir selalu
+    # data atau identifier: "main" (nama channel), "x" (pemisah ukuran),
+    # "scrcpy" (nama program). Saringan ini hanya jaring pengaman untuk
+    # teks yang lupa dibungkus - teks sungguhan selalu lewat tr(), dan di
+    # jalur itu saringan ini tidak dipakai.
+    if re.fullmatch(r"[a-z0-9_.\-]+", bare):
         return False
     return True
 
 
 def collect() -> list[str]:
-    return sorted(from_source_files() | from_action_specs() | from_conditions())
+    return sorted(from_source_files() | from_action_specs()
+                  | from_conditions() | from_ui_tables())
 
 
 def update_locale(code: str, keys: list[str]) -> tuple[int, int, int]:

@@ -56,11 +56,11 @@ EVENT_LABELS = {
 class RuleEditor(QDialog):
     def __init__(self, rule: Rule | None = None, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(tr("Edit Rule") if rule else "Rule Baru")
+        self.setWindowTitle(tr("Edit Rule") if rule else tr("Rule Baru"))
         self._fit_to_screen()
 
         # Salin supaya batal tidak mengubah rule asli.
-        self.rule = copy.deepcopy(rule) if rule else Rule(name="Rule baru")
+        self.rule = copy.deepcopy(rule) if rule else Rule(name=tr("Rule baru"))
         self._cond_widgets: dict[str, QWidget] = {}
 
         outer = QVBoxLayout(self)
@@ -91,7 +91,7 @@ class RuleEditor(QDialog):
 
         self.event_combo = QComboBox()
         for kind, label in EVENT_LABELS.items():
-            self.event_combo.addItem(label, kind)
+            self.event_combo.addItem(tr(label), kind)
         index = self.event_combo.findData(self.rule.event_kind)
         self.event_combo.setCurrentIndex(index if index >= 0 else 0)
         self.event_combo.currentIndexChanged.connect(self._rebuild_conditions)

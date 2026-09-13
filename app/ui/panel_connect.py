@@ -216,12 +216,12 @@ class ConnectPanel(QWidget):
 
     def set_state(self, state: str, message: str) -> None:
         color, label = _COLORS.get(state, _COLORS[STATE_DISCONNECTED])
-        self.status_dot.setText(label)
+        self.status_dot.setText(tr(label))
         self.status_dot.setStyleSheet(f"color:{color};")
         self.detail_label.setText(message or "-")
 
         self._connected = state in (STATE_LIVE, STATE_CONNECTING)
-        self.connect_button.setText(tr("Disconnect") if self._connected else "Connect")
+        self.connect_button.setText(tr("Disconnect") if self._connected else tr("Connect"))
         self.username_edit.setEnabled(not self._connected)
 
     def set_event_count(self, count: int) -> None:

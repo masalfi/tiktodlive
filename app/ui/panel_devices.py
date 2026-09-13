@@ -113,7 +113,7 @@ class DevicesPanel(QWidget):
             self.table.setRowCount(0)
             return
 
-        self.adb_label.setText(f"adb: {self.adb.adb_path}")
+        self.adb_label.setText(tr("adb: {path}", path=self.adb.adb_path))
         devices = self.adb.list_devices()
         self.table.setRowCount(len(devices))
         for row, dev in enumerate(devices):
@@ -164,7 +164,7 @@ class DevicesPanel(QWidget):
         try:
             result = HANDLERS[action_type](target, params)
         except Exception as exc:                     # noqa: BLE001
-            self.result_label.setText(f"Error: {exc}")
+            self.result_label.setText(tr("Error: {sebab}", sebab=exc))
             self.result_label.setStyleSheet(f"color:{DANGER};")
             return
 
