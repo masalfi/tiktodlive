@@ -29,6 +29,7 @@ from app.live.client import (
     STATE_ERROR,
     STATE_LIVE,
 )
+from app.i18n import tr
 from app.models import LiveEvent
 
 log = logging.getLogger(__name__)
@@ -160,7 +161,7 @@ class EulerWorker(QThread):
         backoff = 3
         while not self._should_stop:
             self.status_changed.emit(
-                STATE_CONNECTING, f"Menyambung ke @{self.username} (EulerStream)..."
+                STATE_CONNECTING, tr("Menyambung ke @{nama} (EulerStream)...", nama=self.username)
             )
             url = f"{WS_BASE}?uniqueId={quote(self.username)}"
             try:
@@ -172,7 +173,7 @@ class EulerWorker(QThread):
                 ) as ws:
                     self._ws = ws
                     self.status_changed.emit(
-                        STATE_LIVE, f"Terhubung ke @{self.username} (EulerStream)"
+                        STATE_LIVE, tr("Terhubung ke @{nama} (EulerStream)", nama=self.username)
                     )
                     backoff = 3                     # reset setelah sukses
                     await self._listen(ws)
@@ -183,8 +184,8 @@ class EulerWorker(QThread):
                 if status in (401, 403):
                     self.status_changed.emit(
                         STATE_ERROR,
-                        f"API key ditolak EulerStream (HTTP {status}). "
-                        "Periksa kembali key di tab Koneksi.",
+                        tr("API key ditolak EulerStream (HTTP {status}). "
+                           "Periksa kembali key di tab Koneksi.", status=status),
                     )
                     return                          # retry tidak akan menolong
 
@@ -194,9 +195,9 @@ class EulerWorker(QThread):
                 if code == 4429 or "rate limit" in str(exc).lower():
                     self.status_changed.emit(
                         STATE_ERROR,
-                        "Batas koneksi EulerStream tercapai. Pastikan tidak ada "
-                        "aplikasi/tab lain yang masih tersambung, lalu tunggu "
-                        "sekitar satu menit. Menyambung ulang otomatis...",
+                        tr("Batas koneksi EulerStream tercapai. Pastikan tidak ada "
+                           "aplikasi/tab lain yang masih tersambung, lalu tunggu "
+                           "sekitar satu menit. Menyambung ulang otomatis..."),
                     )
                     backoff = max(backoff, 60)
                 else:
@@ -207,7 +208,7 @@ class EulerWorker(QThread):
             if self._should_stop or not self.auto_reconnect:
                 break
 
-            self.status_changed.emit(STATE_CONNECTING, f"Mencoba lagi dalam {backoff}s...")
+            self.status_changed.emit(STATE_CONNECTING, tr("Mencoba lagi dalam {detik}s...", detik=backoff))
             for _ in range(backoff * 10):
                 if self._should_stop:
                     return

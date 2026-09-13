@@ -12,6 +12,7 @@ from PySide6.QtGui import QFont, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import QComboBox
 
 from app.actions.base import grouped_specs
+from app.i18n import tr
 from app.ui.theme import ACCENT, TEXT_DIM
 
 # Peran data: menyimpan tipe aksi di tiap baris
@@ -26,20 +27,20 @@ def fill_action_combo(combo: QComboBox) -> None:
     header_font.setBold(True)
 
     for title, specs in grouped_specs():
-        header = QStandardItem(title.upper())
+        header = QStandardItem(tr(title).upper())
         header.setFlags(Qt.NoItemFlags)             # tidak bisa dipilih
         header.setFont(header_font)
         header.setForeground(Qt.GlobalColor.gray)
         model.appendRow(header)
 
         for spec in specs:
-            label = f"    {spec.label}"
+            label = f"    {tr(spec.label)}"
             if spec.dangerous:
                 label += "  ⚠"                  # tanda aksi berbahaya
             item = QStandardItem(label)
             item.setData(spec.type, TYPE_ROLE)
             if spec.help:
-                item.setToolTip(spec.help)
+                item.setToolTip(tr(spec.help))
             model.appendRow(item)
 
     combo.setModel(model)

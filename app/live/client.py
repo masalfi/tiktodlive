@@ -12,6 +12,7 @@ import logging
 
 from PySide6.QtCore import QThread, Signal
 
+from app.i18n import tr
 from app.live.normalizer import (
     normalize_comment,
     normalize_gift,
@@ -112,7 +113,7 @@ class TikTokWorker(QThread):
 
         backoff = 3
         while not self._should_stop:
-            self.status_changed.emit(STATE_CONNECTING, f"Menyambung ke @{self.username}...")
+            self.status_changed.emit(STATE_CONNECTING, tr("Menyambung ke @{nama}...", nama=self.username))
             self._client = TikTokLiveClient(unique_id=self.username)
             self._wire_listeners(self._client)
 
@@ -123,10 +124,10 @@ class TikTokWorker(QThread):
                 # connect() kembali normal saat live berakhir / disconnect.
                 if self._should_stop:
                     break
-                self.status_changed.emit(STATE_DISCONNECTED, "Koneksi berakhir")
+                self.status_changed.emit(STATE_DISCONNECTED, tr("Koneksi berakhir"))
             except UserOfflineError:
                 self.status_changed.emit(
-                    STATE_ERROR, f"@{self.username} sedang tidak live."
+                    STATE_ERROR, tr("@{nama} sedang tidak live.", nama=self.username)
                 )
             except asyncio.CancelledError:
                 break
@@ -143,7 +144,7 @@ class TikTokWorker(QThread):
                 break
 
             # Backoff eksponensial supaya tidak membanjiri sign server.
-            self.status_changed.emit(STATE_CONNECTING, f"Mencoba lagi dalam {backoff}s...")
+            self.status_changed.emit(STATE_CONNECTING, tr("Mencoba lagi dalam {detik}s...", detik=backoff))
             for _ in range(backoff * 10):
                 if self._should_stop:
                     return
@@ -168,17 +169,19 @@ class TikTokWorker(QThread):
         # proxy fallback miliknya, yang butuh API key berbayar.
         if status in (400, 401, 403):
             return (
-                f"WebSocket ditolak (HTTP {status}). Sign server gratis "
-                "(EulerStream) sedang tidak bisa memberi koneksi langsung ke "
-                "TikTok dan mengalihkan ke proxy fallback yang butuh API key. "
-                "Isi 'Sign API key' di tab Koneksi, atau coba lagi nanti. "
-                "Ini batasan layanan pihak ketiga, bukan kesalahan aplikasi."
+                tr("WebSocket ditolak (HTTP {status}). Sign server gratis "
+                   "(EulerStream) sedang tidak bisa memberi koneksi langsung ke "
+                   "TikTok dan mengalihkan ke proxy fallback yang butuh API key. "
+                   "Isi 'Sign API key' di tab Koneksi, atau coba lagi nanti. "
+                   "Ini batasan layanan pihak ketiga, bukan kesalahan aplikasi.",
+                   status=status)
             )
 
         if "Sign" in name or "sign" in message.lower():
             return (
-                f"Sign server bermasalah/rate limit ({message}). "
-                "Coba lagi sebentar, atau isi sign_api_key di settings."
+                tr("Sign server bermasalah/rate limit ({sebab}). "
+                   "Coba lagi sebentar, atau isi sign_api_key di settings.",
+                   sebab=message)
             )
 
         return f"{name}: {message}" if message else name
@@ -215,14 +218,14 @@ class TikTokWorker(QThread):
 
         async def on_connect(_event) -> None:
             room = getattr(client, "room_id", "?")
-            self.status_changed.emit(STATE_LIVE, f"Terhubung ke @{self.username} (room {room})")
+            self.status_changed.emit(STATE_LIVE, tr("Terhubung ke @{nama} (room {room})", nama=self.username, room=room))
             self._merge_room_gifts(client)
 
         async def on_disconnect(_event) -> None:
-            self.status_changed.emit(STATE_DISCONNECTED, "Terputus dari live")
+            self.status_changed.emit(STATE_DISCONNECTED, tr("Terputus dari live"))
 
         async def on_live_end(_event) -> None:
-            self.status_changed.emit(STATE_DISCONNECTED, "Live telah berakhir")
+            self.status_changed.emit(STATE_DISCONNECTED, tr("Live telah berakhir"))
 
         async def on_gift(event) -> None:
             gift = getattr(event, "gift", None)

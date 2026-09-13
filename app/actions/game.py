@@ -21,6 +21,7 @@ import time
 from typing import Any
 
 from app.actions.base import ActionSpec, ParamSpec, register
+from app.i18n import tr
 from app.models import ActionResult
 
 log = logging.getLogger(__name__)
@@ -154,17 +155,18 @@ def resolve_point(adb, profile: dict, button: str) -> tuple[int, int] | str:
     entry = buttons.get(resolved)
     if not entry:
         known = sorted(set(buttons) | set(aliases))
-        available = ", ".join(known) or "(profil kosong)"
-        return f"Tombol '{button}' belum dikalibrasi. Yang tersedia: {available}"
+        available = ", ".join(known) or tr("(profil kosong)")
+        return tr("Tombol '{tombol}' belum dikalibrasi. Yang tersedia: {daftar}",
+                  tombol=button, daftar=available)
 
     try:
         px, py = float(entry["x"]), float(entry["y"])
     except (KeyError, TypeError, ValueError):
-        return f"Posisi tombol '{resolved}' rusak di profil"
+        return tr("Posisi tombol '{tombol}' rusak di profil", tombol=resolved)
 
     size = screen_size(adb)
     if size is None:
-        return "Tidak bisa membaca ukuran layar device (adb shell wm size gagal)"
+        return tr("Tidak bisa membaca ukuran layar device (adb shell wm size gagal)")
 
     width, height = size
     now_landscape = width > height
@@ -174,11 +176,12 @@ def resolve_point(adb, profile: dict, button: str) -> tuple[int, int] | str:
     # sisi begitu saja menghasilkan titik yang salah - lebih baik bilang
     # terus terang daripada menekan tempat acak.
     if calibrated_landscape != now_landscape:
-        butuh = "mendatar (landscape)" if calibrated_landscape else "tegak (portrait)"
-        sekarang = "mendatar" if now_landscape else "tegak"
-        return (
-            f"Profil dikalibrasi saat layar {butuh}, tapi HP sekarang {sekarang}. "
-            f"Putar HP ke posisi yang sama, atau kalibrasi ulang di tab Game."
+        butuh = tr("mendatar (landscape)") if calibrated_landscape else tr("tegak (portrait)")
+        sekarang = tr("mendatar") if now_landscape else tr("tegak")
+        return tr(
+            "Profil dikalibrasi saat layar {butuh}, tapi HP sekarang {sekarang}. "
+            "Putar HP ke posisi yang sama, atau kalibrasi ulang di tab Game.",
+            butuh=butuh, sekarang=sekarang,
         )
 
     return int(px * width), int(py * height)
@@ -236,10 +239,10 @@ def _h_tap_button(adb, p: dict[str, Any]) -> ActionResult:
             if i < repeat - 1 and gap:
                 time.sleep(gap / 1000)
     except Exception as exc:                        # noqa: BLE001
-        return _fail("game.tap_button", started, f"Gagal: {exc}")
+        return _fail("game.tap_button", started, tr("Gagal: {sebab}", sebab=exc))
 
     suffix = f" x{repeat}" if repeat > 1 else ""
-    return _ok("game.tap_button", started, f"tekan '{button}'{suffix} di ({x}, {y})")
+    return _ok("game.tap_button", started, tr("tekan '{tombol}'{ulang} di ({x}, {y})", tombol=button, ulang=suffix, x=x, y=y))
 
 
 def _h_hold_button(adb, p: dict[str, Any]) -> ActionResult:
@@ -255,11 +258,11 @@ def _h_hold_button(adb, p: dict[str, Any]) -> ActionResult:
     try:
         proc = _hold(adb, x, y, ms, timeout=max(15, ms // 1000 + 10))
     except Exception as exc:                        # noqa: BLE001
-        return _fail("game.hold_button", started, f"Gagal: {exc}")
+        return _fail("game.hold_button", started, tr("Gagal: {sebab}", sebab=exc))
     problem = _guard(adb, "game.hold_button", started, proc)
     if problem:
         return problem
-    return _ok("game.hold_button", started, f"tahan '{button}' {ms}ms di ({x}, {y})")
+    return _ok("game.hold_button", started, tr("tahan '{tombol}' {ms}ms di ({x}, {y})", tombol=button, ms=ms, x=x, y=y))
 
 
 def _h_aim_skill(adb, p: dict[str, Any]) -> ActionResult:
@@ -275,11 +278,12 @@ def _h_aim_skill(adb, p: dict[str, Any]) -> ActionResult:
     degrees = DIRECTIONS.get(direction)
     if degrees is None:
         return _fail("game.aim_skill", started,
-                     f"Arah '{direction}' tidak dikenal. Pilih: {', '.join(DIRECTIONS)}")
+                     tr("Arah '{arah}' tidak dikenal. Pilih: {daftar}",
+                        arah=direction, daftar=", ".join(DIRECTIONS)))
 
     size = screen_size(adb)
     if size is None:
-        return _fail("game.aim_skill", started, "Tidak bisa membaca ukuran layar")
+        return _fail("game.aim_skill", started, tr("Tidak bisa membaca ukuran layar"))
     # Jarak geser relatif terhadap sisi terpendek, supaya konsisten
     # di resolusi berapa pun.
     reach = max(0.02, min(0.5, float(p.get("distance", 0.12))))
@@ -296,11 +300,11 @@ def _h_aim_skill(adb, p: dict[str, Any]) -> ActionResult:
     try:
         proc = _drag(adb, x, y, x2, y2, ms)
     except Exception as exc:                        # noqa: BLE001
-        return _fail("game.aim_skill", started, f"Gagal: {exc}")
+        return _fail("game.aim_skill", started, tr("Gagal: {sebab}", sebab=exc))
     problem = _guard(adb, "game.aim_skill", started, proc)
     if problem:
         return problem
-    return _ok("game.aim_skill", started, f"'{button}' diarahkan ke {direction}")
+    return _ok("game.aim_skill", started, tr("'{tombol}' diarahkan ke {arah}", tombol=button, arah=direction))
 
 
 def _h_move(adb, p: dict[str, Any]) -> ActionResult:
@@ -316,11 +320,12 @@ def _h_move(adb, p: dict[str, Any]) -> ActionResult:
     degrees = DIRECTIONS.get(direction)
     if degrees is None:
         return _fail("game.move", started,
-                     f"Arah '{direction}' tidak dikenal. Pilih: {', '.join(DIRECTIONS)}")
+                     tr("Arah '{arah}' tidak dikenal. Pilih: {daftar}",
+                        arah=direction, daftar=", ".join(DIRECTIONS)))
 
     size = screen_size(adb)
     if size is None:
-        return _fail("game.move", started, "Tidak bisa membaca ukuran layar")
+        return _fail("game.move", started, tr("Tidak bisa membaca ukuran layar"))
 
     reach = max(0.02, min(0.4, float(p.get("distance", 0.09))))
     radius = int(min(size) * reach)
@@ -332,11 +337,11 @@ def _h_move(adb, p: dict[str, Any]) -> ActionResult:
     try:
         proc = _drag(adb, x, y, x2, y2, ms, timeout=max(15, ms // 1000 + 10))
     except Exception as exc:                        # noqa: BLE001
-        return _fail("game.move", started, f"Gagal: {exc}")
+        return _fail("game.move", started, tr("Gagal: {sebab}", sebab=exc))
     problem = _guard(adb, "game.move", started, proc)
     if problem:
         return problem
-    return _ok("game.move", started, f"jalan ke {direction} selama {ms}ms")
+    return _ok("game.move", started, tr("jalan ke {arah} selama {ms}ms", arah=direction, ms=ms))
 
 
 def _h_combo(adb, p: dict[str, Any]) -> ActionResult:
@@ -344,11 +349,11 @@ def _h_combo(adb, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     raw = str(p.get("buttons") or "").strip()
     if not raw:
-        return _fail("game.combo", started, "Daftar tombol kosong")
+        return _fail("game.combo", started, tr("Daftar tombol kosong"))
 
     names = [n.strip() for n in raw.split(",") if n.strip()]
     if not names:
-        return _fail("game.combo", started, "Daftar tombol kosong")
+        return _fail("game.combo", started, tr("Daftar tombol kosong"))
 
     profile = _profile_of(adb)
     gap = max(0, min(5000, int(p.get("gap_ms", 250))))
@@ -356,12 +361,12 @@ def _h_combo(adb, p: dict[str, Any]) -> ActionResult:
     for name in names:
         point = resolve_point(adb, profile, name)
         if isinstance(point, str):
-            return _fail("game.combo", started, f"{point} (berhenti setelah: {', '.join(done) or '-'})")
+            return _fail("game.combo", started, tr("{sebab} (berhenti setelah: {selesai})", sebab=point, selesai=", ".join(done) or "-"))
         x, y = point
         try:
             proc = _tap(adb, x, y)
         except Exception as exc:                    # noqa: BLE001
-            return _fail("game.combo", started, f"Gagal di '{name}': {exc}")
+            return _fail("game.combo", started, tr("Gagal di '{tombol}': {sebab}", tombol=name, sebab=exc))
         problem = _guard(adb, "game.combo", started, proc)
         if problem:
             return problem

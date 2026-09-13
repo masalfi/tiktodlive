@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.live.gifts import CATALOG, fetch_gift_list_sync
 from app.ui.gift_icons import ICON_SIZE, ICONS
 
@@ -37,7 +39,7 @@ class GiftFetchWorker(QThread):
         if count:
             self.finished_ok.emit(count)
         else:
-            self.failed.emit("API mengembalikan daftar kosong")
+            self.failed.emit(tr("API mengembalikan daftar kosong"))
 
 
 class GiftPicker(QWidget):
@@ -57,8 +59,8 @@ class GiftPicker(QWidget):
         self.combo.currentTextChanged.connect(self._on_changed)
         layout.addWidget(self.combo, 1)
 
-        self.refresh_button = QPushButton("\u27f3")          # simbol segarkan
-        self.refresh_button.setToolTip("Ambil daftar gift terbaru dari TikTok")
+        self.refresh_button = QPushButton(tr("\u27f3"))          # simbol segarkan
+        self.refresh_button.setToolTip(tr("Ambil daftar gift terbaru dari TikTok"))
 
         # Lebar mengikuti teks + padding; angka piksel tetap akan terpotong
         # saat font OS lebih besar (macOS 13pt vs Windows 9pt).
@@ -109,7 +111,7 @@ class GiftPicker(QWidget):
             self.status.setText("0")
         else:
             self.status.setText(str(len(CATALOG)))
-            self.status.setToolTip(f"{len(CATALOG)} gift di katalog")
+            self.status.setToolTip(tr("{n} gift di katalog", n=len(CATALOG)))
 
         if current:
             self.set_value(current)

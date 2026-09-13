@@ -7,6 +7,7 @@ import time
 from collections import deque
 from typing import Any
 
+from app.i18n import tr
 from app.models import LiveEvent, Rule
 
 # Kondisi yang valid per jenis event (dipakai juga oleh editor GUI)
@@ -159,7 +160,7 @@ class RuleEngine:
             if last is not None:
                 remaining = rule.cooldown_sec - (now - last)
                 if remaining > 0:
-                    return False, f"cooldown {remaining:.1f}s lagi"
+                    return False, tr("cooldown {detik}s lagi", detik=f"{remaining:.1f}")
 
         if rule.max_per_hour:
             times = self._fire_times.setdefault(rule.id, deque())

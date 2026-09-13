@@ -14,6 +14,7 @@ import sys
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 _NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
@@ -198,16 +199,16 @@ def enable_wireless(adb, port: int = 5555, timeout: int = 25) -> tuple[bool, str
     ip = device_ip(adb)
     if not ip:
         return False, (
-            "Tidak bisa membaca IP device. Pastikan HP terhubung USB dan "
-            "WiFi-nya menyala (HP dan PC harus satu jaringan)."
+            tr("Tidak bisa membaca IP device. Pastikan HP terhubung USB dan "
+               "WiFi-nya menyala (HP dan PC harus satu jaringan).")
         )
 
     try:
         proc = adb.run(["tcpip", str(port)], timeout=timeout)
     except Exception as exc:                        # noqa: BLE001
-        return False, f"Gagal menjalankan 'adb tcpip': {exc}"
+        return False, tr("Gagal menjalankan 'adb tcpip': {sebab}", sebab=exc)
     if proc.returncode != 0:
-        return False, (proc.stderr or proc.stdout or "adb tcpip gagal").strip()
+        return False, (proc.stderr or proc.stdout or tr("adb tcpip gagal")).strip()
 
     # Device butuh sesaat untuk membuka port setelah tcpip.
     import time
@@ -218,18 +219,18 @@ def enable_wireless(adb, port: int = 5555, timeout: int = 25) -> tuple[bool, str
     try:
         proc = adb.run(["connect", target], timeout=timeout)
     except Exception as exc:                        # noqa: BLE001
-        return False, f"Gagal menjalankan 'adb connect': {exc}"
+        return False, tr("Gagal menjalankan 'adb connect': {sebab}", sebab=exc)
 
     output = (proc.stdout or "") + (proc.stderr or "")
     if "connected to" in output.lower():
         return True, target
-    return False, output.strip() or f"Gagal menyambung ke {target}"
+    return False, output.strip() or tr("Gagal menyambung ke {target}", target=target)
 
 
 def disconnect_wireless(adb, serial: str) -> tuple[bool, str]:
     """Putuskan koneksi wireless."""
     if not serial or ":" not in serial:
-        return False, "Serial wireless tidak valid"
+        return False, tr("Serial wireless tidak valid")
     try:
         proc = adb.run(["disconnect", serial], timeout=15)
     except Exception as exc:                        # noqa: BLE001

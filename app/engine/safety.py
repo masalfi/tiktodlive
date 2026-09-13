@@ -7,6 +7,7 @@ terakhir supaya live tidak hancur karena salah setting.
 from __future__ import annotations
 
 import threading
+from app.i18n import tr
 import time
 from collections import deque
 
@@ -50,11 +51,11 @@ class SafetyGate:
         """Cek apakah satu aksi boleh dijalankan sekarang."""
         with self._lock:
             if not self._armed:
-                return False, "PANIC aktif - semua aksi dihentikan"
+                return False, tr("PANIC aktif - semua aksi dihentikan")
 
             # Aksi ADB butuh device; aksi host (overlay/suara) tetap boleh.
             if not self._device_ready and action_type.startswith("adb."):
-                return False, "device offline (mungkin sedang reboot) - aksi dijeda"
+                return False, tr("device offline (mungkin sedang reboot) - aksi dijeda")
 
             if action_type == "adb.reboot":
                 now = time.time()

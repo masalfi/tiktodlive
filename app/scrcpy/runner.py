@@ -9,6 +9,7 @@ from pathlib import Path
 
 from app.scrcpy.bridge import ScrcpyOptions, build_args
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 _NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
@@ -39,11 +40,11 @@ class ScrcpyRunner:
     ) -> tuple[bool, str]:
         """Jalankan scrcpy. Kembalikan (berhasil, pesan)."""
         if not scrcpy_path:
-            return False, "scrcpy belum tersedia. Klik 'Unduh scrcpy' dulu."
+            return False, tr("scrcpy belum tersedia. Klik 'Unduh scrcpy' dulu.")
 
         key = serial or "_default"
         if self.is_running(key):
-            return False, "scrcpy sudah berjalan untuk device ini."
+            return False, tr("scrcpy sudah berjalan untuk device ini.")
 
         cmd = [scrcpy_path] + build_args(options, serial)
 
@@ -65,7 +66,7 @@ class ScrcpyRunner:
                 env=env,
             )
         except OSError as exc:
-            return False, f"Gagal menjalankan scrcpy: {exc}"
+            return False, tr("Gagal menjalankan scrcpy: {sebab}", sebab=exc)
 
         # Kalau langsung mati, ambil pesan errornya supaya user tahu sebabnya.
         try:
@@ -114,7 +115,7 @@ class ScrcpyRunner:
         key = serial or "_default"
         saved = self._last.get(key)
         if saved is None:
-            return False, "belum pernah dijalankan"
+            return False, tr("belum pernah dijalankan")
         # Bersihkan proses lama yang sudah mati.
         self._procs.pop(key, None)
         path, options, dev_serial, adb_path = saved

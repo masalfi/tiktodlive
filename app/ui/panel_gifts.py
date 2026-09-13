@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.live.gifts import CATALOG
 from app.ui.gift_icons import ICONS
 from app.ui.gift_picker import GiftFetchWorker
@@ -38,14 +40,14 @@ class GiftsPanel(QWidget):
         root.setContentsMargins(10, 10, 10, 10)
 
         bar = QHBoxLayout()
-        bar.addWidget(QLabel("Cari:"))
+        bar.addWidget(QLabel(tr("Cari:")))
         self.search = QLineEdit()
-        self.search.setPlaceholderText("ketik nama gift, mis. rose")
+        self.search.setPlaceholderText(tr("ketik nama gift, mis. rose"))
         self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(self._filter)
         bar.addWidget(self.search, 1)
 
-        self.refresh_button = QPushButton("Segarkan dari TikTok")
+        self.refresh_button = QPushButton(tr("Segarkan dari TikTok"))
         self.refresh_button.clicked.connect(self._refresh)
         bar.addWidget(self.refresh_button)
         root.addLayout(bar)
@@ -110,15 +112,16 @@ class GiftsPanel(QWidget):
 
         if CATALOG.is_empty:
             self.status.setText(
-                "Katalog kosong - klik 'Segarkan dari TikTok'. "
-                "Nama gift tetap bisa diketik manual di editor rule."
+                tr("Katalog kosong - klik 'Segarkan dari TikTok'. Nama gift tetap bisa diketik manual di editor rule.")
             )
         elif len(shown) < len(gifts):
             self.status.setText(
-                f"Menampilkan {len(shown)} dari {len(gifts)} hasil (total {len(CATALOG)} gift)"
+                tr("Menampilkan {n} dari {total} hasil (total katalog {katalog} gift)",
+                   n=len(shown), total=len(gifts), katalog=len(CATALOG))
             )
         else:
-            self.status.setText(f"{len(gifts)} gift ditampilkan (total {len(CATALOG)})")
+            self.status.setText(tr("{n} gift ditampilkan (total {katalog})",
+                                   n=len(gifts), katalog=len(CATALOG)))
 
     def _on_icon_ready(self, gift_id: int) -> None:
         """Pasang ikon ke barisnya tanpa membangun ulang seluruh tabel."""
@@ -137,12 +140,12 @@ class GiftsPanel(QWidget):
         if self._worker is not None and self._worker.isRunning():
             return
         self.refresh_button.setEnabled(False)
-        self.status.setText("mengambil dari TikTok...")
+        self.status.setText(tr("mengambil dari TikTok..."))
 
         self._worker = GiftFetchWorker()
         self._worker.finished_ok.connect(lambda _n: self.reload())
         self._worker.failed.connect(
-            lambda msg: self.status.setText(f"Gagal: {msg[:80]}")
+            lambda msg: self.status.setText(tr("Gagal: {sebab}", sebab=msg[:80]))
         )
         self._worker.finished.connect(lambda: self.refresh_button.setEnabled(True))
         self._worker.start()

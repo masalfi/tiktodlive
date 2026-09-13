@@ -22,6 +22,8 @@ from app.ui.action_picker import (
     current_action_type,
     fill_action_combo,
 )
+
+from app.i18n import tr
 from app.ui.param_form import ParamForm
 from app.ui.theme import DANGER, OK, TEXT_DIM
 
@@ -40,14 +42,14 @@ class DevicesPanel(QWidget):
         root.setContentsMargins(10, 10, 10, 10)
 
         # ---- daftar device
-        dev_box = QGroupBox("Device ADB")
+        dev_box = QGroupBox(tr("Device ADB"))
         dev_layout = QVBoxLayout(dev_box)
 
         bar = QHBoxLayout()
         self.adb_label = QLabel()
         self.adb_label.setProperty("class", "hint")
         bar.addWidget(self.adb_label, 1)
-        refresh = QPushButton("Refresh")
+        refresh = QPushButton(tr("Refresh"))
         refresh.clicked.connect(self.refresh)
         bar.addWidget(refresh)
         dev_layout.addLayout(bar)
@@ -64,24 +66,24 @@ class DevicesPanel(QWidget):
         self.table.itemSelectionChanged.connect(self._on_selection)
         dev_layout.addWidget(self.table)
 
-        self.active_label = QLabel("Device aktif: -")
+        self.active_label = QLabel(tr("Device aktif: -"))
         self.active_label.setStyleSheet("font-weight:bold;")
         dev_layout.addWidget(self.active_label)
 
         root.addWidget(dev_box)
 
         # ---- tes aksi manual
-        test_box = QGroupBox("Tes aksi manual (langsung, tanpa antrian rule)")
+        test_box = QGroupBox(tr("Tes aksi manual (langsung, tanpa antrian rule)"))
         test_layout = QVBoxLayout(test_box)
 
         pick = QHBoxLayout()
-        pick.addWidget(QLabel("Aksi:"))
+        pick.addWidget(QLabel(tr("Aksi:")))
         self.action_combo = QComboBox()
         self._fill_actions()
         self.action_combo.currentIndexChanged.connect(self._on_action_changed)
         pick.addWidget(self.action_combo, 1)
 
-        self.run_button = QPushButton("Jalankan")
+        self.run_button = QPushButton(tr("Jalankan"))
         self.run_button.clicked.connect(self._run)
         pick.addWidget(self.run_button)
         test_layout.addLayout(pick)
@@ -106,7 +108,7 @@ class DevicesPanel(QWidget):
 
     def refresh(self) -> None:
         if not self.adb.available:
-            self.adb_label.setText("adb TIDAK DITEMUKAN - isi adb.path di config/settings.yaml")
+            self.adb_label.setText(tr("adb TIDAK DITEMUKAN - isi adb.path di config/settings.yaml"))
             self.adb_label.setStyleSheet(f"color:{DANGER};")
             self.table.setRowCount(0)
             return
@@ -123,10 +125,12 @@ class DevicesPanel(QWidget):
 
         self._update_active()
         if not devices:
-            self.result_label.setText("Tidak ada device terhubung. Cek kabel USB / adb connect.")
+            self.result_label.setText(tr("Tidak ada device terhubung. Cek kabel USB / adb connect."))
 
     def _update_active(self) -> None:
-        self.active_label.setText(f"Device aktif: {self.adb.serial or '(otomatis, device pertama)'}")
+        self.active_label.setText(
+            tr("Device aktif: {serial}",
+               serial=self.adb.serial or tr("(otomatis, device pertama)")))
 
     def _on_selection(self) -> None:
         rows = self.table.selectionModel().selectedRows() if self.table.selectionModel() else []
@@ -151,7 +155,7 @@ class DevicesPanel(QWidget):
         # safety gate supaya PANIC tetap berlaku.
         allowed, reason = self.queue.safety.check_action(action_type)
         if not allowed:
-            self.result_label.setText(f"Ditolak: {reason}")
+            self.result_label.setText(tr("Ditolak: {sebab}", sebab=reason))
             self.result_label.setStyleSheet(f"color:{DANGER};")
             return
 

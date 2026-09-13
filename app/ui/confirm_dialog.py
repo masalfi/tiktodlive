@@ -9,6 +9,8 @@ from __future__ import annotations
 from PySide6.QtCore import Q_ARG, QMetaObject, QObject, Qt, QTimer, Slot
 from PySide6.QtWidgets import QMessageBox
 
+from app.i18n import tr
+
 
 class _ConfirmBridge(QObject):
     """Menjalankan dialog di GUI thread dan mengembalikan jawabannya."""
@@ -21,7 +23,7 @@ class _ConfirmBridge(QObject):
     def show(self, rule_name: str, action_type: str, timeout_sec: int) -> None:
         box = QMessageBox(self.parent())
         box.setIcon(QMessageBox.Warning)
-        box.setWindowTitle("Konfirmasi aksi berbahaya")
+        box.setWindowTitle(tr("Konfirmasi aksi berbahaya"))
         box.setText(f"Rule <b>{rule_name}</b> ingin menjalankan:<br><b>{action_type}</b>")
         yes = box.addButton("Jalankan", QMessageBox.AcceptRole)
         box.addButton("Batal", QMessageBox.RejectRole)

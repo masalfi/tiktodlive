@@ -18,6 +18,7 @@ from aiohttp import WSMsgType, web
 
 from app.overlay.media import REGISTRY, mime_of
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -96,7 +97,7 @@ class OverlayServer:
             self._ready.set()
             self._loop.run_forever()
         except OSError as exc:
-            self._error = f"Port {self.port} tidak bisa dipakai: {exc}"
+            self._error = tr("Port {port} tidak bisa dipakai: {sebab}", port=self.port, sebab=exc)
             log.error(self._error)
             self._ready.set()
         except Exception as exc:                    # noqa: BLE001
@@ -134,7 +135,7 @@ class OverlayServer:
     async def _handle_index(self, request: web.Request) -> web.Response:
         path = STATIC_DIR / "overlay.html"
         if not path.exists():
-            return web.Response(text="overlay.html tidak ditemukan", status=500)
+            return web.Response(text=tr("overlay.html tidak ditemukan"), status=500)
         return web.Response(text=path.read_text(encoding="utf-8"), content_type="text/html")
 
     async def _handle_media(self, request: web.Request) -> web.StreamResponse:
@@ -146,7 +147,7 @@ class OverlayServer:
         media_id = request.match_info.get("media_id", "")
         path = REGISTRY.resolve(media_id)
         if path is None:
-            return web.Response(text="media tidak ditemukan", status=404)
+            return web.Response(text=tr("media tidak ditemukan"), status=404)
 
         # FileResponse menangani header Range sendiri - dibutuhkan browser
         # untuk seek audio/video, dan sebagian browser menolak memutar

@@ -11,9 +11,14 @@ from typing import Any
 
 from app.actions.base import ActionSpec, ParamSpec, register
 from app.config import SFX_DIR
+from app.i18n import tr
 from app.models import ActionResult
 
 _NO_WINDOW = subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
+#: Penanda "pesan terkirim tapi tidak ada yang menerima". Panel overlay
+#: mencocokkan tr() dari konstanta ini, jadi jangan disalin sebagai literal.
+NO_LISTENER = "tapi belum ada overlay yang membukanya"
 
 # Tombol umum untuk pynput; string lain diperlakukan sebagai karakter biasa.
 SPECIAL_KEYS = [
@@ -43,7 +48,7 @@ class HostExecutor:
 
     def play_sound(self, path: Path, volume: float) -> tuple[bool, str]:
         if self._sound_player is None:
-            return False, "Pemutar suara belum siap (jalankan lewat GUI)"
+            return False, tr("Pemutar suara belum siap (jalankan lewat GUI)")
         return self._sound_player(path, volume)
 
     def cleanup(self) -> None:
@@ -83,31 +88,31 @@ def _h_sound(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     path = _resolve_sound(str(p.get("file") or ""))
     if path is None:
-        return _fail("host.sound", started, f"File suara tidak ditemukan: {p.get('file')}")
+        return _fail("host.sound", started, tr("File suara tidak ditemukan: {file}", file=p.get("file")))
     volume = max(0.0, min(1.0, float(p.get("volume", 1.0))))
     ok, msg = host.play_sound(path, volume)
-    return _ok("host.sound", started, f"putar {path.name}") if ok else _fail("host.sound", started, msg)
+    return _ok("host.sound", started, tr("putar {nama}", nama=path.name)) if ok else _fail("host.sound", started, msg)
 
 
 def _h_script(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     raw = str(p.get("command") or "").strip()
     if not raw:
-        return _fail("host.script", started, "Perintah kosong")
+        return _fail("host.script", started, tr("Perintah kosong"))
     timeout = max(1, int(p.get("timeout_sec", 30)))
     try:
         args = shlex.split(raw, posix=(sys.platform != "win32"))
     except ValueError as exc:
-        return _fail("host.script", started, f"Perintah tidak valid: {exc}")
+        return _fail("host.script", started, tr("Perintah tidak valid: {sebab}", sebab=exc))
     try:
         proc = subprocess.run(
             args, capture_output=True, text=True,
             timeout=timeout, creationflags=_NO_WINDOW,
         )
     except subprocess.TimeoutExpired:
-        return _fail("host.script", started, f"Timeout setelah {timeout}s")
+        return _fail("host.script", started, tr("Timeout setelah {detik}s", detik=timeout))
     except (OSError, ValueError) as exc:
-        return _fail("host.script", started, f"Gagal menjalankan: {exc}")
+        return _fail("host.script", started, tr("Gagal menjalankan: {sebab}", sebab=exc))
 
     out = (proc.stdout or "").strip()
     if proc.returncode != 0:
@@ -120,11 +125,11 @@ def _h_keypress(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     key_name = str(p.get("key") or "").strip()
     if not key_name:
-        return _fail("host.keypress", started, "Tombol kosong")
+        return _fail("host.keypress", started, tr("Tombol kosong"))
     try:
         from pynput.keyboard import Controller, Key
     except ImportError:
-        return _fail("host.keypress", started, "pynput belum terinstall")
+        return _fail("host.keypress", started, tr("pynput belum terinstall"))
 
     modifiers = [m.strip().lower() for m in str(p.get("modifiers") or "").split(",") if m.strip()]
     keyboard = Controller()
@@ -137,11 +142,11 @@ def _h_keypress(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
 
     target = resolve(key_name)
     if target is None:
-        return _fail("host.keypress", started, f"Tombol tidak dikenal: {key_name}")
+        return _fail("host.keypress", started, tr("Tombol tidak dikenal: {tombol}", tombol=key_name))
 
     mod_keys = [resolve(m) for m in modifiers]
     if any(m is None for m in mod_keys):
-        return _fail("host.keypress", started, f"Modifier tidak dikenal: {modifiers}")
+        return _fail("host.keypress", started, tr("Modifier tidak dikenal: {modifier}", modifier=modifiers))
 
     try:
         for mod in mod_keys:
@@ -153,17 +158,17 @@ def _h_keypress(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     except Exception as exc:                        # noqa: BLE001 - pynput bisa gagal karena izin OS
         return _fail(
             "host.keypress", started,
-            f"Gagal menekan tombol: {exc} (macOS: beri izin Accessibility)",
+            tr("Gagal menekan tombol: {sebab} (macOS: beri izin Accessibility)", sebab=exc),
         )
 
     combo = "+".join([*modifiers, key_name])
-    return _ok("host.keypress", started, f"tekan {combo}")
+    return _ok("host.keypress", started, tr("tekan {kombinasi}", kombinasi=combo))
 
 
 def _h_overlay(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     if host.overlay is None or not host.overlay.running:
-        return _fail("host.overlay", started, "Server overlay tidak aktif")
+        return _fail("host.overlay", started, tr("Server overlay tidak aktif"))
     payload = {
         "type": "alert",
         "style": str(p.get("style") or "info"),
@@ -178,7 +183,7 @@ def _overlay_ready(host: HostExecutor, action_type: str, started: float):
     """Cek server overlay siap. Kembalikan ActionResult kalau tidak."""
     if host.overlay is None or not host.overlay.running:
         return _fail(action_type, started,
-                     "Server overlay tidak aktif - cek tab Overlay atau setelan port.")
+                     tr("Server overlay tidak aktif - cek tab Overlay atau setelan port."))
     return None
 
 
@@ -193,9 +198,9 @@ def _send_overlay(host: HostExecutor, action_type: str, started: float, payload:
         # untuk channel itu belum dibuka (atau URL-nya salah ketik).
         return _ok(
             action_type, started,
-            f"terkirim ke channel '{name}', tapi belum ada overlay yang membukanya",
+            tr("terkirim ke channel '{channel}'", channel=name) + ", " + tr(NO_LISTENER),
         )
-    return _ok(action_type, started, f"terkirim ke {sent} overlay (channel '{name}')")
+    return _ok(action_type, started, tr("terkirim ke {n} overlay (channel '{channel}')", n=sent, channel=name))
 
 
 def _h_overlay_sound(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
@@ -212,7 +217,7 @@ def _h_overlay_sound(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     except MediaError as exc:
         return _fail("host.overlay_sound", started, str(exc))
     if kind != "audio":
-        return _fail("host.overlay_sound", started, f"File ini bertipe {kind}, bukan audio")
+        return _fail("host.overlay_sound", started, tr("File ini bertipe {tipe}, bukan audio", tipe=kind))
 
     return _send_overlay(host, "host.overlay_sound", started, {
         "type": "sound",
@@ -245,7 +250,7 @@ def _h_overlay_music(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
         except MediaError as exc:
             return _fail("host.overlay_music", started, str(exc))
         if kind != "audio":
-            return _fail("host.overlay_music", started, f"File ini bertipe {kind}, bukan audio")
+            return _fail("host.overlay_music", started, tr("File ini bertipe {tipe}, bukan audio", tipe=kind))
         payload["url"] = url
 
     return _send_overlay(host, "host.overlay_music", started, payload,
@@ -259,14 +264,14 @@ def _rain_image(host: HostExecutor, p: dict[str, Any], payload: dict, started: f
     raw = str(p.get("file") or "").strip()
     if not raw:
         return _fail("host.overlay_effect", started,
-                     "Sumber 'gambar' dipilih tapi file belum diisi")
+                     tr("Sumber 'gambar' dipilih tapi file belum diisi"))
     try:
         url, kind = host.overlay.media_url(raw)
     except MediaError as exc:
         return _fail("host.overlay_effect", started, str(exc))
     if kind != "image":
         return _fail("host.overlay_effect", started,
-                     f"File ini bertipe {kind}, bukan gambar")
+                     tr("File ini bertipe {tipe}, bukan gambar", tipe=kind))
     payload["image"] = url
     return None
 
@@ -369,7 +374,7 @@ def _h_launch_scrcpy(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     if not info.available:
         return _fail(
             "host.launch_scrcpy", started,
-            "scrcpy belum tersedia. Buka tab 'scrcpy' lalu klik 'Unduh scrcpy' (sekali saja).",
+            tr("scrcpy belum tersedia. Buka tab 'scrcpy' lalu klik 'Unduh scrcpy' (sekali saja)."),
         )
 
     # Pakai opsi dari tab scrcpy; kalau belum ada, pakai bawaan.
@@ -393,9 +398,9 @@ def _h_launch_scrcpy(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
 def _h_stop_scrcpy(host: HostExecutor, p: dict[str, Any]) -> ActionResult:
     started = time.time()
     if host.scrcpy_runner is None:
-        return _ok("host.stop_scrcpy", started, "scrcpy tidak berjalan")
+        return _ok("host.stop_scrcpy", started, tr("scrcpy tidak berjalan"))
     stopped = host.scrcpy_runner.stop(host.adb_serial)
-    return _ok("host.stop_scrcpy", started, "dihentikan" if stopped else "tidak ada yang berjalan")
+    return _ok("host.stop_scrcpy", started, tr("dihentikan") if stopped else tr("tidak ada yang berjalan"))
 
 
 def _h_wait(host: HostExecutor, p: dict[str, Any]) -> ActionResult:

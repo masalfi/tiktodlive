@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.i18n import tr
+
 RATE_LIMIT_URL = "https://api.eulerstream.com/webcast/rate_limits"
 
 
@@ -27,11 +29,11 @@ def fetch_rate_limits(api_key: str = "", timeout: float = 15.0) -> dict[str, Any
 def format_rate_limits(data: dict[str, Any]) -> str:
     """Ringkas jadi satu baris untuk ditampilkan di GUI."""
     parts = []
-    for window, label in (("minute", "menit"), ("hour", "jam"), ("day", "hari")):
+    for window, label in (("minute", tr("menit")), ("hour", tr("jam")), ("day", tr("hari"))):
         bucket = data.get(window)
         if isinstance(bucket, dict):
             parts.append(f"{label}: {bucket.get('remaining', '?')}/{bucket.get('max', '?')}")
-    return "Kuota sign server -> " + ", ".join(parts) if parts else "Kuota tidak diketahui"
+    return tr("Kuota sign server -> ") + ", ".join(parts) if parts else tr("Kuota tidak diketahui")
 
 
 def is_exhausted(data: dict[str, Any]) -> bool:

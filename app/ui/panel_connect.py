@@ -5,6 +5,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
+    QMessageBox,
     QComboBox,
     QFormLayout,
     QGroupBox,
@@ -26,6 +27,9 @@ from app.live.client import (
     STATE_LIVE,
     clean_username,
 )
+
+from app.i18n import tr
+from app.i18n import available_languages, current_language, tr
 from app.live.signcheck import fetch_rate_limits, format_rate_limits, is_exhausted
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM
 
@@ -72,63 +76,71 @@ class ConnectPanel(QWidget):
         root.setContentsMargins(10, 10, 10, 10)
 
         # ---- koneksi
-        box = QGroupBox("Koneksi TikTok LIVE")
+        box = QGroupBox(tr("Koneksi TikTok LIVE"))
         form = QFormLayout(box)
 
         row = QHBoxLayout()
         self.username_edit = QLineEdit(settings["tiktok"]["username"])
-        self.username_edit.setPlaceholderText("nama akun TikTok \u2014 boleh tempel link profilnya")
+        self.username_edit.setPlaceholderText(tr("nama akun TikTok \u2014 boleh tempel link profilnya"))
         self.username_edit.returnPressed.connect(self._toggle)
         # Rapikan begitu user selesai mengetik, supaya dia melihat sendiri
         # bentuk yang benar-benar dipakai.
         self.username_edit.editingFinished.connect(self._tidy_username)
         row.addWidget(self.username_edit, 1)
 
-        self.connect_button = QPushButton("Connect")
+        self.connect_button = QPushButton(tr("Connect"))
         self.connect_button.setMinimumWidth(130)
         self.connect_button.clicked.connect(self._toggle)
         row.addWidget(self.connect_button)
-        form.addRow("Username:", row)
+        form.addRow(tr("Username:"), row)
 
-        self.status_dot = QLabel("Belum terhubung")
+        self.status_dot = QLabel(tr("Belum terhubung"))
         self.status_dot.setProperty("class", "status-big")
         self.status_dot.setStyleSheet(f"color:{TEXT_DIM};")
-        form.addRow("Status:", self.status_dot)
+        form.addRow(tr("Status:"), self.status_dot)
 
         self.detail_label = QLabel("-")
         self.detail_label.setWordWrap(True)
         self.detail_label.setStyleSheet(f"color:{TEXT_DIM};")
-        form.addRow("Info:", self.detail_label)
+        form.addRow(tr("Info:"), self.detail_label)
 
         self.viewer_label = QLabel("-")
-        form.addRow("Penonton / like:", self.viewer_label)
+        form.addRow(tr("Penonton / like:"), self.viewer_label)
 
         self.events_label = QLabel("0")
         self.events_label.setStyleSheet(f"color:{ACCENT}; font-weight:bold;")
-        form.addRow("Event diterima:", self.events_label)
+        form.addRow(tr("Event diterima:"), self.events_label)
 
         root.addWidget(box)
 
         # ---- pengaturan
-        opt_box = QGroupBox("Pengaturan")
+        opt_box = QGroupBox(tr("Pengaturan"))
         opt_form = QFormLayout(opt_box)
 
+        self.language_combo = QComboBox()
+        for code, name in available_languages().items():
+            self.language_combo.addItem(name, code)
+        index = self.language_combo.findData(current_language())
+        self.language_combo.setCurrentIndex(index if index >= 0 else 0)
+        self.language_combo.currentIndexChanged.connect(self._on_language_changed)
+        opt_form.addRow(tr("Bahasa:"), self.language_combo)
+
         self.backend_combo = QComboBox()
-        self.backend_combo.addItem("Otomatis (pakai API key kalau ada)", "auto")
-        self.backend_combo.addItem("EulerStream - butuh API key", "eulerstream")
-        self.backend_combo.addItem("TikTokLive - koneksi langsung", "tiktoklive")
+        self.backend_combo.addItem(tr("Otomatis (pakai API key kalau ada)"), "auto")
+        self.backend_combo.addItem(tr("EulerStream - butuh API key"), "eulerstream")
+        self.backend_combo.addItem(tr("TikTokLive - koneksi langsung"), "tiktoklive")
         idx = self.backend_combo.findData(settings["tiktok"].get("backend", "auto"))
         self.backend_combo.setCurrentIndex(idx if idx >= 0 else 0)
         self.backend_combo.currentIndexChanged.connect(self._emit_settings_changed)
-        opt_form.addRow("Backend:", self.backend_combo)
+        opt_form.addRow(tr("Backend:"), self.backend_combo)
 
         self.sign_key_edit = QLineEdit(settings["tiktok"]["sign_api_key"])
-        self.sign_key_edit.setPlaceholderText("opsional - EulerStream API key untuk naikkan rate limit")
+        self.sign_key_edit.setPlaceholderText(tr("opsional - EulerStream API key untuk naikkan rate limit"))
         self.sign_key_edit.setEchoMode(QLineEdit.Password)
         self.sign_key_edit.editingFinished.connect(self.settings_changed.emit)
-        opt_form.addRow("Sign API key:", self.sign_key_edit)
+        opt_form.addRow(tr("Sign API key:"), self.sign_key_edit)
 
-        self.reconnect_check = QCheckBox("Sambung ulang otomatis kalau terputus")
+        self.reconnect_check = QCheckBox(tr("Sambung ulang otomatis kalau terputus"))
         self.reconnect_check.setChecked(bool(settings["tiktok"]["auto_reconnect"]))
         self.reconnect_check.toggled.connect(self._emit_settings_changed)
         opt_form.addRow("", self.reconnect_check)
@@ -137,26 +149,25 @@ class ConnectPanel(QWidget):
         self.max_queue_spin.setRange(1, 500)
         self.max_queue_spin.setValue(int(settings["safety"]["max_queue"]))
         self.max_queue_spin.valueChanged.connect(self._emit_settings_changed)
-        opt_form.addRow("Maks antrian:", self.max_queue_spin)
+        opt_form.addRow(tr("Maks antrian:"), self.max_queue_spin)
 
         self.reboot_cap_spin = QSpinBox()
         self.reboot_cap_spin.setRange(0, 20)
         self.reboot_cap_spin.setValue(int(settings["safety"]["reboot_max_per_hour"]))
         self.reboot_cap_spin.valueChanged.connect(self._emit_settings_changed)
-        opt_form.addRow("Maks reboot / jam:", self.reboot_cap_spin)
+        opt_form.addRow(tr("Maks reboot / jam:"), self.reboot_cap_spin)
 
         quota_row = QHBoxLayout()
         self.quota_label = QLabel("-")
         self.quota_label.setProperty("class", "hint")
         quota_row.addWidget(self.quota_label, 1)
-        self.quota_button = QPushButton("Cek kuota")
+        self.quota_button = QPushButton(tr("Cek kuota"))
         self.quota_button.clicked.connect(self.check_quota)
         quota_row.addWidget(self.quota_button)
-        opt_form.addRow("Sign server:", quota_row)
+        opt_form.addRow(tr("Sign server:"), quota_row)
 
         note = QLabel(
-            "Batas reboot adalah pengaman keras - rule tidak bisa melewatinya.\n"
-            "Perubahan berlaku setelah aplikasi dijalankan ulang."
+            tr("Batas reboot adalah pengaman keras - rule tidak bisa melewatinya.\nPerubahan berlaku setelah aplikasi dijalankan ulang.")
         )
         note.setProperty("class", "hint")
         opt_form.addRow("", note)
@@ -165,6 +176,20 @@ class ConnectPanel(QWidget):
         root.addStretch(1)
 
     # ------------------------------------------------------------------ API
+
+    def _on_language_changed(self, *_args) -> None:
+        """Bahasa dipasang saat widget dibuat, jadi perubahannya baru
+        terlihat setelah aplikasi dijalankan ulang."""
+        code = self.language_combo.currentData()
+        if not code or code == current_language():
+            return
+        self.settings["language"] = code
+        self.settings_changed.emit()
+        QMessageBox.information(
+            self,
+            tr("Bahasa"),
+            tr("Bahasa akan berubah setelah aplikasi dijalankan ulang."),
+        )
 
     def _tidy_username(self) -> None:
         cleaned = clean_username(self.username_edit.text())
@@ -196,7 +221,7 @@ class ConnectPanel(QWidget):
         self.detail_label.setText(message or "-")
 
         self._connected = state in (STATE_LIVE, STATE_CONNECTING)
-        self.connect_button.setText("Disconnect" if self._connected else "Connect")
+        self.connect_button.setText(tr("Disconnect") if self._connected else "Connect")
         self.username_edit.setEnabled(not self._connected)
 
     def set_event_count(self, count: int) -> None:
@@ -214,7 +239,7 @@ class ConnectPanel(QWidget):
         self._quota_worker = QuotaWorker(self.sign_key_edit.text().strip())
         self._quota_worker.done.connect(self._on_quota)
         self._quota_worker.failed.connect(
-            lambda msg: self.quota_label.setText(f"gagal cek: {msg[:60]}")
+            lambda msg: self.quota_label.setText(tr("gagal cek: {sebab}", sebab=msg[:60]))
         )
         self._quota_worker.finished.connect(lambda: self.quota_button.setEnabled(True))
         self._quota_worker.start()
@@ -231,6 +256,7 @@ class ConnectPanel(QWidget):
         super().closeEvent(event)
 
     def apply_to_settings(self, settings: dict) -> None:
+        settings["language"] = self.language_combo.currentData() or "id"
         settings["tiktok"]["username"] = clean_username(self.username_edit.text())
         settings["tiktok"]["sign_api_key"] = self.sign_key_edit.text().strip()
         settings["tiktok"]["auto_reconnect"] = self.reconnect_check.isChecked()

@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.models import Rule
 from app.ui.rule_editor import EVENT_LABELS, RuleEditor
 from app.ui.theme import TEXT_DIM
@@ -51,11 +53,11 @@ class RulesPanel(QWidget):
             bar.addWidget(button)
 
         bar.addSpacing(20)
-        self.toggle_button = QPushButton("Aktif / Nonaktif")
+        self.toggle_button = QPushButton(tr("Aktif / Nonaktif"))
         self.toggle_button.clicked.connect(self._toggle)
         bar.addWidget(self.toggle_button)
 
-        self.test_button = QPushButton("Test Run")
+        self.test_button = QPushButton(tr("Test Run"))
         self.test_button.setStyleSheet("font-weight:bold;")
         self.test_button.clicked.connect(self._test)
         bar.addWidget(self.test_button)
@@ -77,8 +79,7 @@ class RulesPanel(QWidget):
         root.addWidget(self.table, 1)
 
         hint = QLabel(
-            "Klik dua kali untuk mengedit. Test Run menjalankan rule memakai event contoh, "
-            "jadi bisa dicek tanpa menunggu gift asli."
+            tr("Klik dua kali untuk mengedit. Test Run menjalankan rule memakai event contoh, jadi bisa dicek tanpa menunggu gift asli.")
         )
         hint.setProperty("class", "hint")
         root.addWidget(hint)
@@ -126,7 +127,7 @@ class RulesPanel(QWidget):
     def _edit(self) -> None:
         row = self._selected_row()
         if row < 0:
-            QMessageBox.information(self, "Pilih rule", "Pilih rule yang mau diedit.")
+            QMessageBox.information(self, tr("Pilih rule"), tr("Pilih rule yang mau diedit."))
             return
         editor = RuleEditor(self.rules[row], parent=self)
         if editor.exec() == RuleEditor.Accepted:
@@ -149,7 +150,7 @@ class RulesPanel(QWidget):
             return
         rule = self.rules[row]
         confirm = QMessageBox.question(
-            self, "Hapus rule", f"Hapus rule '{rule.name}'?",
+            self, tr("Hapus rule"), tr("Hapus rule '{nama}'?", nama=rule.name),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if confirm == QMessageBox.Yes:
@@ -166,6 +167,6 @@ class RulesPanel(QWidget):
     def _test(self) -> None:
         row = self._selected_row()
         if row < 0:
-            QMessageBox.information(self, "Pilih rule", "Pilih rule yang mau dites.")
+            QMessageBox.information(self, tr("Pilih rule"), tr("Pilih rule yang mau dites."))
             return
         self.test_requested.emit(self.rules[row])

@@ -16,6 +16,7 @@ from typing import Any
 
 from app.actions.base import ActionSpec, ParamSpec, register
 from app.config import find_adb
+from app.i18n import tr
 from app.models import ActionResult
 
 # Windows: sembunyikan jendela konsol
@@ -53,8 +54,8 @@ class AdbExecutor:
     def _base_cmd(self) -> list[str]:
         if not self.adb_path:
             raise AdbError(
-                "adb tidak ditemukan. Install Android platform-tools atau isi "
-                "path-nya di config/settings.yaml (adb.path)."
+                tr("adb tidak ditemukan. Install Android platform-tools atau isi "
+                   "path-nya di config/settings.yaml (adb.path).")
             )
         cmd = [self.adb_path]
         if self.serial:
@@ -124,9 +125,9 @@ def _run_guarded(adb: AdbExecutor, action_type: str, args: list[str], success_ms
     except AdbError as exc:
         return _fail(action_type, started, str(exc))
     except subprocess.TimeoutExpired:
-        return _fail(action_type, started, f"Timeout setelah {adb.timeout}s")
+        return _fail(action_type, started, tr("Timeout setelah {detik}s", detik=adb.timeout))
     except OSError as exc:
-        return _fail(action_type, started, f"Gagal menjalankan adb: {exc}")
+        return _fail(action_type, started, tr("Gagal menjalankan adb: {sebab}", sebab=exc))
 
     if proc.returncode != 0:
         err = (proc.stderr or proc.stdout or "").strip() or f"exit code {proc.returncode}"
@@ -160,43 +161,43 @@ def _h_swipe(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
 def _h_text(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     raw = str(p.get("text") or "")
     if not raw:
-        return ActionResult("adb.text", False, "Teks kosong")
+        return ActionResult("adb.text", False, tr("Teks kosong"))
     # `input text` tidak menerima spasi literal; %s adalah konvensi Android.
     encoded = raw.replace(" ", "%s")
-    return _run_guarded(adb, "adb.text", ["shell", "input", "text", encoded], f"ketik: {raw[:40]}")
+    return _run_guarded(adb, "adb.text", ["shell", "input", "text", encoded], tr("ketik: {teks}", teks=raw[:40]))
 
 
 def _h_keyevent(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     key = str(p.get("keycode") or "KEYCODE_HOME")
-    return _run_guarded(adb, "adb.keyevent", ["shell", "input", "keyevent", key], f"keyevent {key}")
+    return _run_guarded(adb, "adb.keyevent", ["shell", "input", "keyevent", key], tr("keyevent {key}", key=key))
 
 
 def _h_open_app(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     pkg = str(p.get("package") or "").strip()
     if not pkg:
-        return ActionResult("adb.open_app", False, "Nama package kosong")
+        return ActionResult("adb.open_app", False, tr("Nama package kosong"))
     return _run_guarded(
         adb, "adb.open_app",
         ["shell", "monkey", "-p", pkg, "-c", "android.intent.category.LAUNCHER", "1"],
-        f"buka {pkg}",
+        tr("buka {package}", package=pkg),
     )
 
 
 def _h_close_app(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     pkg = str(p.get("package") or "").strip()
     if not pkg:
-        return ActionResult("adb.close_app", False, "Nama package kosong")
-    return _run_guarded(adb, "adb.close_app", ["shell", "am", "force-stop", pkg], f"tutup {pkg}")
+        return ActionResult("adb.close_app", False, tr("Nama package kosong"))
+    return _run_guarded(adb, "adb.close_app", ["shell", "am", "force-stop", pkg], tr("tutup {package}", package=pkg))
 
 
 def _h_open_url(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     url = str(p.get("url") or "").strip()
     if not url:
-        return ActionResult("adb.open_url", False, "URL kosong")
+        return ActionResult("adb.open_url", False, tr("URL kosong"))
     return _run_guarded(
         adb, "adb.open_url",
         ["shell", "am", "start", "-a", "android.intent.action.VIEW", "-d", url],
-        f"buka {url}",
+        tr("buka {url}", url=url),
     )
 
 
@@ -207,16 +208,16 @@ def _h_screenshot(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
         out_dir.mkdir(parents=True, exist_ok=True)
         proc = adb.run(["exec-out", "screencap", "-p"], binary=True)
         if proc.returncode != 0 or not proc.stdout:
-            return _fail("adb.screenshot", started, "screencap gagal")
+            return _fail("adb.screenshot", started, tr("screencap gagal"))
         path = out_dir / f"shot_{int(time.time())}.png"
         path.write_bytes(proc.stdout)
-        return _ok("adb.screenshot", started, f"disimpan: {path}")
+        return _ok("adb.screenshot", started, tr("disimpan: {path}", path=path))
     except AdbError as exc:
         return _fail("adb.screenshot", started, str(exc))
     except subprocess.TimeoutExpired:
-        return _fail("adb.screenshot", started, "Timeout")
+        return _fail("adb.screenshot", started, tr("Timeout"))
     except OSError as exc:
-        return _fail("adb.screenshot", started, f"Gagal menyimpan: {exc}")
+        return _fail("adb.screenshot", started, tr("Gagal menyimpan: {sebab}", sebab=exc))
 
 
 def _h_reboot(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
@@ -280,13 +281,13 @@ def _h_volume(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
 def _h_shell(adb: AdbExecutor, p: dict[str, Any]) -> ActionResult:
     raw = str(p.get("command") or "").strip()
     if not raw:
-        return ActionResult("adb.shell", False, "Perintah kosong")
+        return ActionResult("adb.shell", False, tr("Perintah kosong"))
     try:
         # shlex.split -> argumen list, tetap tanpa shell=True di host.
         args = shlex.split(raw)
     except ValueError as exc:
-        return ActionResult("adb.shell", False, f"Perintah tidak valid: {exc}")
-    return _run_guarded(adb, "adb.shell", ["shell", *args], f"shell: {raw[:60]}")
+        return ActionResult("adb.shell", False, tr("Perintah tidak valid: {sebab}", sebab=exc))
+    return _run_guarded(adb, "adb.shell", ["shell", *args], tr("shell: {perintah}", perintah=raw[:60]))
 
 
 # --------------------------------------------------------------- registrasi

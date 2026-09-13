@@ -96,6 +96,10 @@ akun sedang siaran. Akun harus benar-benar sedang live.
 *Sign API key* opsional — hanya untuk menaikkan rate limit server signature
 (EulerStream) kalau sering kena limit.
 
+*Bahasa* — pilih Bahasa Indonesia, English, atau 中文. Perubahan berlaku
+setelah aplikasi dijalankan ulang. Lihat [Bahasa & terjemahan](#bahasa--terjemahan)
+kalau ingin menambah bahasa baru.
+
 ### Tab Rules
 Satu rule = **event + kondisi → rangkaian aksi**.
 
@@ -499,6 +503,7 @@ jadi satu streak 20 Rose tidak memicu aksi 20 kali.
 `config/gift_icons/` — cache gambar ikon gift (dibuat otomatis, ±5 MB).
 `vendor/` — binary scrcpy hasil unduhan (dibuat otomatis, ±12 MB).
 `config/rules.yaml.bak` — cadangan rule otomatis sebelum setiap penyimpanan.
+`locales/*.json` — berkas terjemahan antarmuka (lihat bagian Bahasa di bawah).
 
 Isi `config/rules.yaml` bawaan sudah berisi 5 contoh rule siap pakai.
 
@@ -581,6 +586,92 @@ akan menolong dan hanya menghabiskan kuota sign server.
 
 Semua fitur lain (rule, aksi ADB, overlay, katalog gift) tetap berfungsi penuh
 tanpa koneksi live — pakai **Test Run** di tab Rules untuk mengujinya.
+
+---
+
+## Bahasa & terjemahan
+
+Aplikasi tersedia dalam **Bahasa Indonesia**, **English**, dan **中文**.
+Ganti di tab **Koneksi → Bahasa**, lalu jalankan ulang aplikasi.
+
+Bahasa Indonesia adalah bahasa sumber: teks di kode program *adalah*
+kuncinya. Jadi tidak ada berkas `id.json` — kalau sebuah teks belum
+diterjemahkan, yang tampil adalah teks Indonesia aslinya, bukan kotak
+kosong atau kode aneh.
+
+### Menerjemahkan ke bahasa baru
+
+Semua terjemahan ada di `locales/<kode>.json` dengan format datar:
+
+```json
+{
+  "_bahasa": "es",
+  "_nama": "Español",
+  "strings": {
+    "Mulai": "Iniciar",
+    "Antrian: {n}": "Cola: {n}",
+    "Sambungkan HP Android": "Conecta tu teléfono Android"
+  }
+}
+```
+
+Langkahnya:
+
+1. Tambahkan bahasamu ke `LANGUAGES` di [`app/i18n.py`](app/i18n.py),
+   misalnya `"es": "Español"`. Kodenya bebas, tapi ikuti ISO 639-1.
+2. Jalankan `python tools/extract_strings.py`. Berkas `locales/es.json`
+   dibuat dengan semua kunci dan nilai kosong.
+3. Isi nilainya satu per satu. Nilai kosong berarti belum diterjemahkan
+   dan akan tampil dalam Bahasa Indonesia — jadi berkas setengah jadi
+   tetap aman dipakai.
+4. Jalankan `python -m pytest tests/test_i18n.py -q` untuk memeriksa
+   hasilnya, lalu buka aplikasi dan pilih bahasamu.
+
+### Aturan yang wajib diikuti
+
+**Placeholder `{...}` harus tetap ada, dan namanya tidak boleh diubah.**
+Urutannya boleh ditukar sesuai tata bahasamu.
+
+| | |
+|---|---|
+| benar | `"Terhubung ke @{nama} (room {room})"` → `"已连接到 @{nama}（房间 {room}）"` |
+| SALAH | `"Terhubung ke @{nama} (room {room})"` → `"Connected to @{user}"` |
+
+Kalau ada placeholder yang hilang atau salah nama, `tr()` gagal memformat
+dan diam-diam jatuh kembali ke teks Indonesia. `tests/test_i18n.py`
+menangkap ini sebelum sampai ke pengguna.
+
+Hal lain:
+
+- `\n` di dalam nilai berarti baris baru — pertahankan jumlahnya.
+- Nama tab sebaiknya pendek (1–2 kata) supaya tidak terpotong.
+- Nama gift TikTok (Rose, Lion, dsb.) **tidak** diterjemahkan; itu data
+  dari TikTok, bukan teks antarmuka.
+- Pesan log teknis (`Gagal menyimpan cache gift: %s`) memang tidak
+  diterjemahkan — itu untuk developer, bukan untuk pengguna.
+
+### Kalau kamu mengubah teks di kode
+
+Setiap teks yang tampil ke pengguna dibungkus `tr()`:
+
+```python
+from app.i18n import tr
+
+label = QLabel(tr("Sambungkan HP Android"))
+self.status.setText(tr("Antrian: {n}", n=jumlah))
+```
+
+Setelah mengubah atau menambah teks, jalankan:
+
+```bash
+python tools/extract_strings.py
+```
+
+Teks baru masuk ke setiap `locales/*.json` dengan nilai kosong, dan teks
+yang sudah tidak dipakai dipindahkan ke bagian `_tidak_dipakai` — tidak
+dibuang, supaya terjemahan tidak hilang kalau nanti teksnya dipakai lagi.
+
+---
 
 ## Test
 

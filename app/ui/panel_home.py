@@ -22,6 +22,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM, WARN
 
 # Status tiap langkah
@@ -68,8 +70,8 @@ class StepRow(QWidget):
         self.detail.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         layout.addWidget(self.detail, 1)
 
-        button = QPushButton("Buka")
-        button.setToolTip(f"Buka tab {step.tab}")
+        button = QPushButton(tr("Buka"))
+        button.setToolTip(tr("Buka tab {tab}", tab=step.tab))
         button.clicked.connect(lambda: self.open_tab.emit(step.tab))
         layout.addWidget(button)
 
@@ -77,7 +79,7 @@ class StepRow(QWidget):
         try:
             status, detail = self.step.check()
         except Exception as exc:                    # noqa: BLE001
-            status, detail = PERLU, f"tidak bisa diperiksa ({exc})"
+            status, detail = PERLU, tr("tidak bisa diperiksa ({exc})", exc=exc)
 
         self.icon.setText(_ICON.get(status, "?"))
         self.icon.setStyleSheet(f"color:{_COLOR.get(status, TEXT_DIM)}; font-weight:bold;")
@@ -98,7 +100,7 @@ class HomePanel(QWidget):
         root.setContentsMargins(12, 12, 12, 12)
 
         # ---- ringkasan
-        summary_box = QGroupBox("Status")
+        summary_box = QGroupBox(tr("Status"))
         summary_layout = QVBoxLayout(summary_box)
         self.summary = QLabel("memeriksa...")
         self.summary.setProperty("class", "status-big")
@@ -110,7 +112,7 @@ class HomePanel(QWidget):
         root.addWidget(summary_box)
 
         # ---- langkah
-        steps_box = QGroupBox("Langkah persiapan")
+        steps_box = QGroupBox(tr("Langkah persiapan"))
         steps_layout = QVBoxLayout(steps_box)
         steps_layout.setSpacing(0)
 
@@ -128,14 +130,10 @@ class HomePanel(QWidget):
         root.addWidget(steps_box)
 
         # ---- bantuan singkat
-        help_box = QGroupBox("Cara kerjanya")
+        help_box = QGroupBox(tr("Cara kerjanya"))
         help_layout = QVBoxLayout(help_box)
         help_text = QLabel(
-            "Penonton mengirim gift atau komentar di TikTok LIVE → aplikasi "
-            "mencocokkannya dengan aturan yang kamu buat → aksi dijalankan "
-            "di HP (tap, tombol game, reboot) atau di komputer (suara, efek "
-            "overlay untuk OBS).\n\n"
-            "Tombol merah PANIC di kanan bawah menghentikan semua aksi seketika."
+            tr("Penonton mengirim gift atau komentar di TikTok LIVE → aplikasi mencocokkannya dengan aturan yang kamu buat → aksi dijalankan di HP (tap, tombol game, reboot) atau di komputer (suara, efek overlay untuk OBS).\n\nTombol merah PANIC di kanan bawah menghentikan semua aksi seketika.")
         )
         help_text.setWordWrap(True)
         help_text.setProperty("class", "hint")
@@ -149,24 +147,24 @@ class HomePanel(QWidget):
 
     def _steps(self) -> list[Step]:
         return [
-            Step(1, "Sambungkan HP Android", "Devices", self._check_device),
-            Step(2, "Siapkan scrcpy (opsional)", "scrcpy", self._check_scrcpy),
-            Step(3, "Isi akun TikTok", "Koneksi", self._check_account),
-            Step(4, "Buat aturan gift", "Rules", self._check_rules),
-            Step(5, "Pasang overlay di OBS (opsional)", "Overlay", self._check_overlay),
-            Step(6, "Kalibrasi tombol game (opsional)", "Game", self._check_game),
+            Step(1, tr("Sambungkan HP Android"), "Devices", self._check_device),
+            Step(2, tr("Siapkan scrcpy (opsional)"), "scrcpy", self._check_scrcpy),
+            Step(3, tr("Isi akun TikTok"), "Koneksi", self._check_account),
+            Step(4, tr("Buat aturan gift"), "Rules", self._check_rules),
+            Step(5, tr("Pasang overlay di OBS (opsional)"), "Overlay", self._check_overlay),
+            Step(6, tr("Kalibrasi tombol game (opsional)"), "Game", self._check_game),
         ]
 
     def _check_device(self) -> tuple[str, str]:
         w = self.window
         if not w.adb.available:
-            return PERLU, "adb belum ada — unduh scrcpy dulu (langkah 2)"
+            return PERLU, tr("adb belum ada — unduh scrcpy dulu (langkah 2)")
         devices = w.adb.list_devices()
         ready = [d for d in devices if d.get("state") == "device"]
         if not ready:
             if devices:
-                return PERLU, "HP terdeteksi tapi belum diizinkan — cek dialog di layar HP"
-            return PERLU, "belum ada HP — colok kabel USB & nyalakan USB debugging"
+                return PERLU, tr("HP terdeteksi tapi belum diizinkan — cek dialog di layar HP")
+            return PERLU, tr("belum ada HP — colok kabel USB & nyalakan USB debugging")
         active = w.adb.serial or ready[0]["serial"]
         model = next((d.get("model") or "" for d in ready if d["serial"] == active), "")
         label = f"{model} ({active})" if model else active
@@ -175,43 +173,43 @@ class HomePanel(QWidget):
     def _check_scrcpy(self) -> tuple[str, str]:
         path = getattr(self.window.scrcpy_panel, "scrcpy_path", "")
         if not path:
-            return PERLU, "belum diunduh — sekali klik, adb ikut di dalamnya"
-        return SIAP, "terpasang, siap untuk mirroring layar"
+            return PERLU, tr("belum diunduh — sekali klik, adb ikut di dalamnya")
+        return SIAP, tr("terpasang, siap untuk mirroring layar")
 
     def _check_account(self) -> tuple[str, str]:
         name = str(self.window.settings["tiktok"]["username"] or "").strip()
         if not name:
-            return PERLU, "belum diisi — masukkan nama akun TikTok kamu"
+            return PERLU, tr("belum diisi — masukkan nama akun TikTok kamu")
         key = str(self.window.settings["tiktok"]["sign_api_key"] or "").strip()
         if not key:
-            return SIAP, f"@{name} — tanpa API key koneksi sering ditolak"
-        return SIAP, f"@{name} (API key terpasang)"
+            return SIAP, tr("@{name} — tanpa API key koneksi sering ditolak", name=name)
+        return SIAP, tr("@{name} (API key terpasang)", name=name)
 
     def _check_rules(self) -> tuple[str, str]:
         rules = self.window.rules
         active = [r for r in rules if r.enabled]
         if not rules:
-            return PERLU, "belum ada aturan — buat minimal satu"
+            return PERLU, tr("belum ada aturan — buat minimal satu")
         if not active:
-            return PERLU, f"{len(rules)} aturan, tapi semuanya nonaktif"
-        return SIAP, f"{len(active)} aktif dari {len(rules)} aturan"
+            return PERLU, tr("{total} aturan, tapi semuanya nonaktif", total=len(rules))
+        return SIAP, tr("{active} aktif dari {total} aturan", active=len(active), total=len(rules))
 
     def _check_overlay(self) -> tuple[str, str]:
         overlay = self.window.overlay
         if not overlay.running:
-            return PERLU, f"server mati: {overlay.error or 'tidak aktif'}"
+            return PERLU, tr("server mati: {sebab}", sebab=overlay.error or tr("tidak aktif"))
         count = overlay.client_count
         if not count:
-            return OPSIONAL, "server jalan, belum ada Browser Source di OBS"
+            return OPSIONAL, tr("server jalan, belum ada Browser Source di OBS")
         channels = ", ".join(sorted(overlay.channels()))
-        return SIAP, f"{count} overlay terbuka ({channels})"
+        return SIAP, tr("{count} overlay terbuka ({channels})", count=count, channels=channels)
 
     def _check_game(self) -> tuple[str, str]:
         profile = self.window.game_panel.current_profile()
         name = profile.get("name", "?")
         if not profile.get("calibrated"):
-            return OPSIONAL, f"{name}: posisi tombol masih perkiraan"
-        return SIAP, f"{name}: tombol sudah dikalibrasi"
+            return OPSIONAL, tr("{name}: posisi tombol masih perkiraan", name=name)
+        return SIAP, tr("{name}: tombol sudah dikalibrasi", name=name)
 
     # ----------------------------------------------------------- refresh
 
@@ -225,15 +223,15 @@ class HomePanel(QWidget):
         ]
 
         if not blocking:
-            self.summary.setText("● Siap dipakai")
+            self.summary.setText(tr("● Siap dipakai"))
             self.summary.setStyleSheet(f"color:{OK};")
             self.summary_hint.setText(
-                "Buka tab Koneksi lalu klik Connect untuk mulai menerima gift."
+                tr("Buka tab Koneksi lalu klik Connect untuk mulai menerima gift.")
             )
         else:
-            self.summary.setText(f"● Perlu {len(blocking)} langkah lagi")
+            self.summary.setText(tr("● Perlu {n} langkah lagi", n=len(blocking)))
             self.summary.setStyleSheet(f"color:{WARN};")
-            self.summary_hint.setText("Yang belum: " + ", ".join(blocking).lower() + ".")
+            self.summary_hint.setText(tr("Yang belum: ") + ", ".join(blocking).lower() + ".")
 
     def showEvent(self, event) -> None:
         super().showEvent(event)

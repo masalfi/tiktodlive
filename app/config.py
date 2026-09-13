@@ -13,6 +13,7 @@ import yaml
 
 from app.models import Rule
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 
@@ -28,6 +29,8 @@ GAMES_PATH = CONFIG_DIR / "game_profiles.yaml"
 SFX_DIR = ROOT / "assets" / "sfx"
 
 DEFAULT_SETTINGS: dict[str, Any] = {
+    # Kode bahasa antarmuka: id | en | zh (lihat folder locales/)
+    "language": "id",
     "tiktok": {
         "username": "",
         "sign_api_key": "",        # EulerStream API key
@@ -99,7 +102,7 @@ def load_rules() -> list[Rule]:
         with open(RULES_PATH, "r", encoding="utf-8") as fh:
             data = yaml.safe_load(fh) or {}
     except (OSError, yaml.YAMLError) as exc:
-        raise RulesLoadError(f"config/rules.yaml tidak bisa dibaca: {exc}") from exc
+        raise RulesLoadError(tr("config/rules.yaml tidak bisa dibaca: {sebab}", sebab=exc)) from exc
 
     rules = []
     for item in data.get("rules") or []:

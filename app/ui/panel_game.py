@@ -27,6 +27,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.config import active_profile, load_games, save_games
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM, WARN
 
@@ -48,7 +50,7 @@ class ScreenshotWorker(QThread):
             self.failed.emit(str(exc))
             return
         if proc.returncode != 0 or not proc.stdout:
-            self.failed.emit((proc.stderr or b"").decode(errors="replace")[:200] or "screencap gagal")
+            self.failed.emit((proc.stderr or b"").decode(errors="replace")[:200] or tr("screencap gagal"))
             return
         self.done.emit(bytes(proc.stdout))
 
@@ -63,7 +65,7 @@ class ScreenView(QLabel):
         self.setMinimumHeight(240)
         self.setAlignment(Qt.AlignCenter)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.setText("Klik 'Ambil Screenshot' saat game sudah terbuka di HP.")
+        self.setText(tr("Klik 'Ambil Screenshot' saat game sudah terbuka di HP."))
         self._pixmap: QPixmap | None = None
         self._markers: dict[str, tuple[float, float]] = {}
         self._highlight = ""
@@ -184,21 +186,21 @@ class GamePanel(QWidget):
     # --------------------------------------------------------------- atas
 
     def _build_top(self) -> QWidget:
-        box = QGroupBox("Profil game")
+        box = QGroupBox(tr("Profil game"))
         layout = QHBoxLayout(box)
 
-        layout.addWidget(QLabel("Game:"))
+        layout.addWidget(QLabel(tr("Game:")))
         self.profile_combo = QComboBox()
         self.profile_combo.currentIndexChanged.connect(self._on_profile_changed)
         layout.addWidget(self.profile_combo, 1)
 
-        self.shot_button = QPushButton("Ambil Screenshot")
-        self.shot_button.setToolTip("Buka game di HP dulu, lalu klik ini")
+        self.shot_button = QPushButton(tr("Ambil Screenshot"))
+        self.shot_button.setToolTip(tr("Buka game di HP dulu, lalu klik ini"))
         self.shot_button.clicked.connect(self._take_screenshot)
         layout.addWidget(self.shot_button)
 
-        self.open_button = QPushButton("Buka game")
-        self.open_button.setToolTip("Jalankan game di HP lewat adb")
+        self.open_button = QPushButton(tr("Buka game"))
+        self.open_button.setToolTip(tr("Jalankan game di HP lewat adb"))
         self.open_button.clicked.connect(self._open_game)
         layout.addWidget(self.open_button)
 
@@ -207,14 +209,12 @@ class GamePanel(QWidget):
         return box
 
     def _build_guide(self) -> QWidget:
-        box = QGroupBox("Cara kalibrasi")
+        box = QGroupBox(tr("Cara kalibrasi"))
         layout = QVBoxLayout(box)
         layout.setSpacing(4)
 
         steps = QLabel(
-            "1. Buka game di HP sampai MASUK PERTANDINGAN (layar mendatar)\n"
-            "2. Klik Ambil Screenshot  →  3. Pilih tombol di kiri  →  "
-            "4. Klik posisinya di gambar  →  5. Tes tekan  →  6. Simpan"
+            tr("1. Buka game di HP sampai MASUK PERTANDINGAN (layar mendatar)\n2. Klik Ambil Screenshot  →  3. Pilih tombol di kiri  →  4. Klik posisinya di gambar  →  5. Tes tekan  →  6. Simpan")
         )
         steps.setWordWrap(True)
         steps.setProperty("class", "hint")
@@ -227,7 +227,7 @@ class GamePanel(QWidget):
     # ------------------------------------------------------------ tombol
 
     def _build_buttons(self) -> QWidget:
-        box = QGroupBox("Tombol")
+        box = QGroupBox(tr("Tombol"))
         box.setMaximumWidth(260)
         layout = QVBoxLayout(box)
 
@@ -235,25 +235,25 @@ class GamePanel(QWidget):
         self.button_list.currentItemChanged.connect(self._on_button_selected)
         layout.addWidget(self.button_list, 1)
 
-        hint = QLabel("Pilih tombol, lalu klik posisinya di screenshot.")
+        hint = QLabel(tr("Pilih tombol, lalu klik posisinya di screenshot."))
         hint.setWordWrap(True)
         hint.setProperty("class", "hint")
         layout.addWidget(hint)
 
         row = QHBoxLayout()
-        test = QPushButton("Tes tekan")
-        test.setToolTip("Kirim tap ke HP untuk memastikan posisinya benar")
+        test = QPushButton(tr("Tes tekan"))
+        test.setToolTip(tr("Kirim tap ke HP untuk memastikan posisinya benar"))
         test.clicked.connect(self._test_button)
         row.addWidget(test)
 
-        save = QPushButton("Simpan")
+        save = QPushButton(tr("Simpan"))
         save.clicked.connect(self._save_profile)
         row.addWidget(save)
         layout.addLayout(row)
         return box
 
     def _build_view(self) -> QWidget:
-        box = QGroupBox("Layar HP")
+        box = QGroupBox(tr("Layar HP"))
         layout = QVBoxLayout(box)
         self.view = ScreenView()
         self.view.clicked.connect(self._on_view_clicked)
@@ -293,10 +293,10 @@ class GamePanel(QWidget):
 
         calibrated = bool(profile.get("calibrated"))
         if calibrated:
-            self.status_label.setText("sudah dikalibrasi")
+            self.status_label.setText(tr("sudah dikalibrasi"))
             self.status_label.setStyleSheet(f"color:{OK};")
         else:
-            self.status_label.setText("belum dikalibrasi (posisi masih perkiraan)")
+            self.status_label.setText(tr("belum dikalibrasi (posisi masih perkiraan)"))
             self.status_label.setStyleSheet(f"color:{WARN};")
 
         self._refresh_markers()
@@ -312,7 +312,7 @@ class GamePanel(QWidget):
         if not hasattr(self, "orientation_label"):
             return
         if not self.adb.available:
-            self.orientation_label.setText("adb belum tersedia.")
+            self.orientation_label.setText(tr("adb belum tersedia."))
             self.orientation_label.setStyleSheet(f"color:{TEXT_DIM};")
             return
 
@@ -320,27 +320,26 @@ class GamePanel(QWidget):
 
         rotation = current_rotation(self.adb)
         if rotation is None:
-            self.orientation_label.setText("HP tidak terbaca — cek koneksi di tab Devices.")
+            self.orientation_label.setText(tr("HP tidak terbaca — cek koneksi di tab Devices."))
             self.orientation_label.setStyleSheet(f"color:{DANGER};")
             return
 
         now_landscape = rotation in (1, 3)
         want_landscape = bool(self.current_profile().get("landscape", True))
-        now_text = "mendatar" if now_landscape else "tegak"
-        want_text = "mendatar" if want_landscape else "tegak"
+        now_text = tr("mendatar") if now_landscape else tr("tegak")
+        want_text = tr("mendatar") if want_landscape else tr("tegak")
 
         if screen_awake(self.adb) is False:
             self.orientation_label.setText(
-                "Layar HP mati / terkunci — buka kuncinya dulu."
+                tr(tr("Layar HP mati / terkunci — buka kuncinya dulu."))
             )
             self.orientation_label.setStyleSheet(f"color:{WARN};")
         elif now_landscape == want_landscape:
-            self.orientation_label.setText(f"HP sekarang {now_text} — cocok dengan profil.")
+            self.orientation_label.setText(tr("HP sekarang {now} — cocok dengan profil.", now=now_text))
             self.orientation_label.setStyleSheet(f"color:{OK};")
         else:
             self.orientation_label.setText(
-                f"HP sekarang {now_text}, profil ini untuk layar {want_text}. "
-                f"Putar HP atau buka gamenya dulu."
+                tr("HP sekarang {now}, profil ini untuk layar {want}. Putar HP atau buka gamenya dulu.", now=now_text, want=want_text)
             )
             self.orientation_label.setStyleSheet(f"color:{WARN};")
 
@@ -370,8 +369,8 @@ class GamePanel(QWidget):
             # Ada perubahan yang belum disimpan - jangan buang diam-diam.
             self._report(
                 False,
-                "File profil berubah di luar aplikasi, tapi ada perubahan "
-                "yang belum kamu simpan. Simpan atau buka ulang aplikasi.",
+                tr("File profil berubah di luar aplikasi, tapi ada perubahan yang belum kamu simpan. "
+                   "Simpan atau buka ulang aplikasi."),
             )
             return
 
@@ -404,13 +403,13 @@ class GamePanel(QWidget):
 
         self._worker = ScreenshotWorker(self.adb)
         self._worker.done.connect(self._on_screenshot)
-        self._worker.failed.connect(lambda m: self._report(False, f"Gagal: {m}"))
+        self._worker.failed.connect(lambda m: self._report(False, tr("Gagal: {sebab}", sebab=m)))
         self._worker.finished.connect(lambda: self.shot_button.setEnabled(True))
         self._worker.start()
 
     def _on_screenshot(self, data: bytes) -> None:
         if not self.view.set_image(data):
-            self._report(False, "Screenshot tidak bisa dibaca.")
+            self._report(False, tr("Screenshot tidak bisa dibaca."))
             return
         self._refresh_markers()
 
@@ -422,34 +421,35 @@ class GamePanel(QWidget):
         # pasti salah, jadi peringatkan sebelum user menghabiskan waktu.
         if shot and shot[0] <= shot[1]:
             notes.append(
-                "HP sedang TEGAK - kalau ini game mendatar, buka gamenya dulu "
-                "sampai masuk pertandingan, baru ambil screenshot lagi."
+                tr("HP sedang TEGAK - kalau ini game mendatar, buka gamenya dulu sampai masuk "
+                   "pertandingan, baru ambil screenshot lagi.")
             )
-        notes.append("Pilih tombol di kiri, lalu klik posisinya.")
+        notes.append(tr("Pilih tombol di kiri, lalu klik posisinya."))
         self._report(True, " ".join(notes))
         self.refresh_orientation()
 
     def _open_game(self) -> None:
         package = str(self.current_profile().get("package") or "").strip()
         if not package:
-            self._report(False, "Profil ini belum punya nama package.")
+            self._report(False, tr("Profil ini belum punya nama package."))
             return
         try:
             proc = self.adb.run(
                 ["shell", "monkey", "-p", package, "-c",
                  "android.intent.category.LAUNCHER", "1"], timeout=20)
         except Exception as exc:                    # noqa: BLE001
-            self._report(False, f"Gagal membuka game: {exc}")
+            self._report(False, tr("Gagal membuka game: {sebab}", sebab=exc))
             return
         ok = proc.returncode == 0
-        self._report(ok, f"{package} dibuka" if ok else "Gagal membuka game (package benar?)")
+        self._report(ok, tr("{package} dibuka", package=package) if ok
+                     else tr("Gagal membuka game (package benar?)"))
 
     # -------------------------------------------------------- kalibrasi
 
     def _on_view_clicked(self, px: float, py: float) -> None:
         item = self.button_list.currentItem()
         if item is None:
-            self._report(False, "Pilih dulu tombol yang mau dikalibrasi di daftar kiri.")
+            self._report(False, tr("Pilih dulu tombol yang mau dikalibrasi di daftar kiri."))
             return
         name = item.text()
         profile = self.current_profile()
@@ -466,7 +466,8 @@ class GamePanel(QWidget):
 
         self._dirty = True
         self._refresh_markers()
-        self._report(True, f"'{name}' disetel ke {px:.3f}, {py:.3f} — klik Simpan untuk menyimpan.")
+        self._report(True, tr("'{tombol}' disetel ke {x}, {y} — klik Simpan untuk menyimpan.",
+                              tombol=name, x=f"{px:.3f}", y=f"{py:.3f}"))
 
     def _screen_size(self):
         from app.actions.game import screen_size
@@ -476,7 +477,7 @@ class GamePanel(QWidget):
     def _test_button(self) -> None:
         item = self.button_list.currentItem()
         if item is None:
-            self._report(False, "Pilih tombol dulu.")
+            self._report(False, tr("Pilih tombol dulu."))
             return
         from app.actions.base import HANDLERS, coerce_params
         from app.actions.game import screen_awake
@@ -485,8 +486,8 @@ class GamePanel(QWidget):
         # Tanpa peringatan ini, aksinya terlihat "berhasil" padahal tidak.
         if screen_awake(self.adb) is False:
             self._report(False,
-                         "Layar HP mati atau terkunci - buka kuncinya dulu, "
-                         "kalau tidak tap tidak akan terlihat efeknya.")
+                         tr("Layar HP mati atau terkunci - buka kuncinya dulu, kalau tidak tap "
+                            "tidak akan terlihat efeknya."))
             return
 
         # Pakai profil yang sedang diedit, bukan yang tersimpan di disk.
@@ -500,7 +501,7 @@ class GamePanel(QWidget):
         try:
             save_games(self.games)
         except OSError as exc:
-            self._report(False, f"Gagal menyimpan: {exc}")
+            self._report(False, tr("Gagal menyimpan: {sebab}", sebab=exc))
             return
         self._dirty = False
         try:
@@ -509,7 +510,7 @@ class GamePanel(QWidget):
             self._games_mtime = GAMES_PATH.stat().st_mtime
         except OSError:
             pass
-        self._report(True, "Profil disimpan ke config/game_profiles.yaml")
+        self._report(True, tr("Profil disimpan ke config/game_profiles.yaml"))
         self.profile_changed.emit()
 
     def _report(self, ok: bool, message: str) -> None:

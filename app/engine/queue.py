@@ -15,6 +15,7 @@ from typing import Callable
 from app.actions.base import HANDLERS, coerce_params, get_spec
 from app.engine.safety import SafetyGate
 from app.engine.template import context_from_event, render_params
+from app.i18n import tr
 from app.models import ActionResult, Job, LiveEvent, Rule
 
 log = logging.getLogger(__name__)
@@ -72,13 +73,13 @@ class ActionQueue:
     def submit(self, rule: Rule, event: LiveEvent) -> tuple[bool, str]:
         """Masukkan job ke antrian. (diterima, alasan_kalau_ditolak)"""
         if not self.safety.armed:
-            return False, "PANIC aktif"
+            return False, tr("PANIC aktif")
         if not self.safety.device_ready and any(
             a.type.startswith("adb.") for a in rule.actions
         ):
-            return False, "device offline - rule dilewati"
+            return False, tr("device offline - rule dilewati")
         if self._queue.qsize() >= self.max_queue:
-            return False, f"antrian penuh ({self.max_queue})"
+            return False, tr("antrian penuh ({maks})", maks=self.max_queue)
         self._queue.put(Job(rule=rule, event=event))
         return True, ""
 
@@ -133,13 +134,13 @@ class ActionQueue:
 
             spec = get_spec(action.type)
             if spec is None:
-                self._emit(job, index, ActionResult(action.type, False, "Tipe aksi tidak dikenal"))
+                self._emit(job, index, ActionResult(action.type, False, tr("Tipe aksi tidak dikenal")))
                 continue
 
             # Konfirmasi untuk aksi berbahaya bila rule memintanya.
             if spec.dangerous and job.rule.require_confirm:
                 if self.confirm_handler is None:
-                    self._emit(job, index, ActionResult(action.type, False, "Butuh konfirmasi, tidak ada handler"))
+                    self._emit(job, index, ActionResult(action.type, False, tr("Butuh konfirmasi, tidak ada handler")))
                     return
                 if not self.confirm_handler(job.rule, action.type):
                     self._emit(job, index, ActionResult(action.type, False, "Dibatalkan user"))

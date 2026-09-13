@@ -32,6 +32,7 @@ from PySide6.QtWidgets import (
 from app.actions.base import get_spec, specs_by_category
 
 from app.engine.rules import COMMON_CONDITIONS, CONDITION_SPECS
+from app.i18n import tr
 from app.models import Action, Rule
 from app.ui.gift_picker import GiftPicker
 from app.ui.param_form import ParamForm
@@ -55,7 +56,7 @@ EVENT_LABELS = {
 class RuleEditor(QDialog):
     def __init__(self, rule: Rule | None = None, parent=None) -> None:
         super().__init__(parent)
-        self.setWindowTitle("Edit Rule" if rule else "Rule Baru")
+        self.setWindowTitle(tr("Edit Rule") if rule else "Rule Baru")
         self._fit_to_screen()
 
         # Salin supaya batal tidak mengubah rule asli.
@@ -78,13 +79,13 @@ class RuleEditor(QDialog):
         root = QVBoxLayout(content)
 
         # ---- identitas
-        head = QGroupBox("Rule")
+        head = QGroupBox(tr("Rule"))
         head_form = QFormLayout(head)
 
         self.name_edit = QLineEdit(self.rule.name)
-        head_form.addRow("Nama:", self.name_edit)
+        head_form.addRow(tr("Nama:"), self.name_edit)
 
-        self.enabled_check = QCheckBox("Aktif")
+        self.enabled_check = QCheckBox(tr("Aktif"))
         self.enabled_check.setChecked(self.rule.enabled)
         head_form.addRow("", self.enabled_check)
 
@@ -94,14 +95,14 @@ class RuleEditor(QDialog):
         index = self.event_combo.findData(self.rule.event_kind)
         self.event_combo.setCurrentIndex(index if index >= 0 else 0)
         self.event_combo.currentIndexChanged.connect(self._rebuild_conditions)
-        head_form.addRow("Event:", self.event_combo)
+        head_form.addRow(tr("Event:"), self.event_combo)
 
         root.addWidget(head)
 
         # ---- kondisi | aksi
         splitter = QSplitter(Qt.Horizontal)
 
-        cond_box = QGroupBox("Kondisi (kosongkan = selalu cocok)")
+        cond_box = QGroupBox(tr("Kondisi (kosongkan = selalu cocok)"))
         cond_outer = QVBoxLayout(cond_box)
         self.cond_widget = QWidget()
         self.cond_form = QFormLayout(self.cond_widget)
@@ -109,7 +110,7 @@ class RuleEditor(QDialog):
         cond_outer.addStretch(1)
         splitter.addWidget(cond_box)
 
-        action_box = QGroupBox("Aksi (dijalankan berurutan)")
+        action_box = QGroupBox(tr("Aksi (dijalankan berurutan)"))
         action_layout = QVBoxLayout(action_box)
 
         self.action_list = QListWidget()
@@ -130,7 +131,7 @@ class RuleEditor(QDialog):
         action_layout.addLayout(btn_row)
 
         pick_row = QHBoxLayout()
-        pick_row.addWidget(QLabel("Tipe:"))
+        pick_row.addWidget(QLabel(tr("Tipe:")))
         self.action_type_combo = QComboBox()
         self._fill_action_types()
         self.action_type_combo.currentIndexChanged.connect(self._on_type_changed)
@@ -149,7 +150,7 @@ class RuleEditor(QDialog):
         action_layout.addWidget(self.param_scroll, 1)
 
         delay_row = QHBoxLayout()
-        delay_row.addWidget(QLabel("Jeda setelah aksi ini (detik):"))
+        delay_row.addWidget(QLabel(tr("Jeda setelah aksi ini (detik):")))
         self.delay_spin = QDoubleSpinBox()
         self.delay_spin.setRange(0.0, 60.0)
         self.delay_spin.setSingleStep(0.5)
@@ -167,25 +168,25 @@ class RuleEditor(QDialog):
         root.addWidget(splitter, 1)
 
         # ---- pengaman
-        safe_box = QGroupBox("Pengaman")
+        safe_box = QGroupBox(tr("Pengaman"))
         safe_form = QFormLayout(safe_box)
 
         self.cooldown_spin = QDoubleSpinBox()
         self.cooldown_spin.setRange(0.0, 3600.0)
         self.cooldown_spin.setSingleStep(1.0)
         self.cooldown_spin.setValue(self.rule.cooldown_sec)
-        self.cooldown_spin.setSpecialValueText("tanpa cooldown")
-        safe_form.addRow("Cooldown (detik):", self.cooldown_spin)
+        self.cooldown_spin.setSpecialValueText(tr("tanpa cooldown"))
+        safe_form.addRow(tr("Cooldown (detik):"), self.cooldown_spin)
 
         self.max_hour_spin = QSpinBox()
         self.max_hour_spin.setRange(0, 1000)
         self.max_hour_spin.setValue(self.rule.max_per_hour or 0)
-        self.max_hour_spin.setSpecialValueText("tanpa batas")
-        safe_form.addRow("Maks per jam:", self.max_hour_spin)
+        self.max_hour_spin.setSpecialValueText(tr("tanpa batas"))
+        safe_form.addRow(tr("Maks per jam:"), self.max_hour_spin)
 
-        self.confirm_check = QCheckBox("Minta konfirmasi dulu")
+        self.confirm_check = QCheckBox(tr("Minta konfirmasi dulu"))
         self.confirm_check.setToolTip(
-            "Untuk aksi berbahaya seperti reboot, shell, atau jalankan script")
+            tr("Untuk aksi berbahaya seperti reboot, shell, atau jalankan script"))
         self.confirm_check.setChecked(self.rule.require_confirm)
         safe_form.addRow("", self.confirm_check)
 
@@ -255,7 +256,7 @@ class RuleEditor(QDialog):
         current = self.rule.conditions or {}
 
         if not specs:
-            label = QLabel("Event ini tidak punya kondisi tambahan.")
+            label = QLabel(tr("Event ini tidak punya kondisi tambahan."))
             label.setStyleSheet("color:#888;")
             self.cond_form.addRow("", label)
             return
@@ -269,7 +270,7 @@ class RuleEditor(QDialog):
             elif ctype == "int":
                 widget = QSpinBox()
                 widget.setRange(-1, 100_000_000)
-                widget.setSpecialValueText("(tidak dipakai)")
+                widget.setSpecialValueText(tr("(tidak dipakai)"))
                 widget.setValue(int(value) if value is not None else -1)
             elif ctype.startswith("choice:"):
                 widget = QComboBox()
@@ -282,9 +283,9 @@ class RuleEditor(QDialog):
             else:
                 widget = QLineEdit(str(value) if value is not None else "")
                 if name == "from_user":
-                    widget.setPlaceholderText("kosong = semua; pisah koma untuk beberapa")
+                    widget.setPlaceholderText(tr("kosong = semua; pisah koma untuk beberapa"))
             self._cond_widgets[name] = widget
-            self.cond_form.addRow(f"{label}:", widget)
+            self.cond_form.addRow(f"{tr(label)}:", widget)
 
     def _collect_conditions(self) -> dict[str, Any]:
         """Hanya simpan kondisi yang benar-benar diisi."""
@@ -399,10 +400,10 @@ class RuleEditor(QDialog):
 
         name = self.name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "Nama kosong", "Beri nama untuk rule ini.")
+            QMessageBox.warning(self, tr("Nama kosong"), tr("Beri nama untuk rule ini."))
             return
         if not self.rule.actions:
-            QMessageBox.warning(self, "Tanpa aksi", "Tambahkan minimal satu aksi.")
+            QMessageBox.warning(self, tr("Tanpa aksi"), tr("Tambahkan minimal satu aksi."))
             return
 
         self.rule.name = name

@@ -14,6 +14,7 @@ import time
 from typing import Any
 
 from app.actions.base import ActionSpec, ParamSpec, register
+from app.i18n import tr
 from app.models import ActionResult
 
 log = logging.getLogger(__name__)
@@ -79,41 +80,41 @@ def game_package(adb) -> str:
 
 def _stop(adb, package: str, action_type: str, started: float) -> ActionResult:
     if not package:
-        return _fail(action_type, started, "Nama package kosong")
+        return _fail(action_type, started, tr("Nama package kosong"))
     if package in PROTECTED:
         return _fail(
             action_type, started,
-            f"'{package}' adalah aplikasi sistem - menutupnya bisa membuat HP "
-            "tidak bisa dipakai. Dilewati demi keamanan.",
+            tr("'{package}' adalah aplikasi sistem - menutupnya bisa membuat HP "
+               "tidak bisa dipakai. Dilewati demi keamanan.", package=package),
         )
     try:
         proc = adb.run(["shell", "am", "force-stop", package], timeout=20)
     except Exception as exc:                # noqa: BLE001
-        return _fail(action_type, started, f"Gagal: {exc}")
+        return _fail(action_type, started, tr("Gagal: {sebab}", sebab=exc))
     if proc.returncode != 0:
         err = (proc.stderr or proc.stdout or "").strip() or f"exit {proc.returncode}"
         return _fail(action_type, started, err)
-    return _ok(action_type, started, f"{package} ditutup")
+    return _ok(action_type, started, tr("{package} ditutup", package=package))
 
 
 def _launch(adb, package: str, action_type: str, started: float) -> ActionResult:
     if not package:
-        return _fail(action_type, started, "Nama package kosong")
+        return _fail(action_type, started, tr("Nama package kosong"))
     try:
         proc = adb.run(
             ["shell", "monkey", "-p", package, "-c",
              "android.intent.category.LAUNCHER", "1"], timeout=25)
     except Exception as exc:                # noqa: BLE001
-        return _fail(action_type, started, f"Gagal: {exc}")
+        return _fail(action_type, started, tr("Gagal: {sebab}", sebab=exc))
 
     output = (proc.stdout or "") + (proc.stderr or "")
     # monkey mengembalikan 0 walau package tidak ada, jadi cek pesannya.
     if proc.returncode != 0 or "No activities found" in output or "Error" in output:
         return _fail(
             action_type, started,
-            f"Tidak bisa membuka '{package}' - pastikan aplikasinya terpasang",
+            tr("Tidak bisa membuka '{package}' - pastikan aplikasinya terpasang", package=package),
         )
-    return _ok(action_type, started, f"{package} dibuka")
+    return _ok(action_type, started, tr("{package} dibuka", package=package))
 
 
 # ---------------------------------------------------------------- handlers
@@ -150,12 +151,12 @@ def _h_close_game(adb, p: dict[str, Any]) -> ActionResult:
     if not package:
         return _fail(
             "app.close_game", started,
-            "Profil game aktif belum punya nama package. Isi di tab Game "
-            "atau pakai aksi 'Tutup aplikasi' dan ketik package-nya.",
+            tr("Profil game aktif belum punya nama package. Isi di tab Game "
+               "atau pakai aksi 'Tutup aplikasi' dan ketik package-nya."),
         )
     result = _stop(adb, package, "app.close_game", started)
     if result.ok:
-        return _ok("app.close_game", started, f"game ditutup ({package})")
+        return _ok("app.close_game", started, tr("game ditutup ({package})", package=package))
     return result
 
 
@@ -164,7 +165,7 @@ def _h_restart_game(adb, p: dict[str, Any]) -> ActionResult:
     package = game_package(adb)
     if not package:
         return _fail("app.restart_game", started,
-                     "Profil game aktif belum punya nama package.")
+                     tr("Profil game aktif belum punya nama package."))
     result = _stop(adb, package, "app.restart_game", started)
     if not result.ok:
         return result
@@ -173,7 +174,7 @@ def _h_restart_game(adb, p: dict[str, Any]) -> ActionResult:
     time.sleep(delay)
     result = _launch(adb, package, "app.restart_game", started)
     if result.ok:
-        return _ok("app.restart_game", started, f"game dimulai ulang ({package})")
+        return _ok("app.restart_game", started, tr("game dimulai ulang ({package})", package=package))
     return result
 
 
@@ -183,13 +184,14 @@ def _h_close_foreground(adb, p: dict[str, Any]) -> ActionResult:
     package = foreground_package(adb)
     if not package:
         return _fail("app.close_foreground", started,
-                     "Tidak bisa membaca aplikasi yang sedang tampil")
+                     tr("Tidak bisa membaca aplikasi yang sedang tampil"))
     if package in PROTECTED:
         return _fail("app.close_foreground", started,
-                     f"Yang tampil adalah aplikasi sistem ({package}) - dilewati")
+                     tr("Yang tampil adalah aplikasi sistem ({package}) - dilewati", package=package))
     result = _stop(adb, package, "app.close_foreground", started)
     if result.ok:
-        return _ok("app.close_foreground", started, f"aplikasi di layar ditutup ({package})")
+        return _ok("app.close_foreground", started,
+                   tr("aplikasi di layar ditutup ({package})", package=package))
     return result
 
 
@@ -207,7 +209,7 @@ def _h_clear_background(adb, p: dict[str, Any]) -> ActionResult:
     packages = list_packages(adb, only_user=True)
     if not packages:
         return _fail("app.clear_background", started,
-                     "Tidak bisa membaca daftar aplikasi")
+                     tr("Tidak bisa membaca daftar aplikasi"))
 
     closed = 0
     for package in packages:

@@ -20,6 +20,7 @@ from pathlib import Path
 
 from app.config import ROOT
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 VENDOR_DIR = ROOT / "vendor"
@@ -189,8 +190,8 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
     asset = pick_asset(release)
     if asset is None:
         raise RuntimeError(
-            f"Tidak ada binary scrcpy resmi untuk {platform_label()}. "
-            "Install manual, lalu isi path-nya di Pengaturan."
+            tr("Tidak ada binary scrcpy resmi untuk {os}. "
+               "Install manual, lalu isi path-nya di Pengaturan.", os=platform_label())
         )
 
     name = asset["name"]
@@ -217,7 +218,7 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
                                    int(got * 100 / total))
     except Exception as exc:                        # noqa: BLE001
         archive.unlink(missing_ok=True)
-        raise RuntimeError(f"Gagal mengunduh: {exc}") from exc
+        raise RuntimeError(tr("Gagal mengunduh: {sebab}", sebab=exc)) from exc
 
     # Verifikasi kalau checksum tersedia; kalau tidak, lanjut dengan peringatan.
     expected = _expected_hashes(release).get(name)
@@ -225,7 +226,7 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
         actual = digest.hexdigest()
         if actual.lower() != expected.lower():
             archive.unlink(missing_ok=True)
-            raise RuntimeError("Checksum tidak cocok - unduhan rusak atau tidak asli.")
+            raise RuntimeError(tr("Checksum tidak cocok - unduhan rusak atau tidak asli."))
         report("Checksum cocok.", 100)
     else:
         log.warning("SHA256SUMS.txt tidak tersedia, verifikasi dilewati")
@@ -238,7 +239,7 @@ def download_scrcpy(progress=None) -> ScrcpyInfo:
 
     info = find_scrcpy()
     if not info.available:
-        raise RuntimeError("Ekstraksi selesai tapi binary scrcpy tidak ditemukan.")
+        raise RuntimeError(tr("Ekstraksi selesai tapi binary scrcpy tidak ditemukan."))
 
     _make_executable(Path(info.path))
     report(f"Selesai: {info.version or 'scrcpy siap'}", 100)

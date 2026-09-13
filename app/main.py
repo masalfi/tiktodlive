@@ -8,6 +8,8 @@ import sys
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
+from app.config import load_settings
+from app.i18n import load_language
 from app.ui.main_window import MainWindow
 from app.ui.theme import apply_font, build_stylesheet
 
@@ -29,6 +31,10 @@ def main() -> int:
     )
 
     app = QApplication(sys.argv)
+    # Bahasa dimuat sebelum jendela dibangun, karena teksnya dipasang
+    # saat widget dibuat.
+    load_language(str(load_settings().get("language") or "id"))
+
     app.setApplicationName("TikTok Live Controller")
     app.setApplicationDisplayName("TikTok Live Controller")
 

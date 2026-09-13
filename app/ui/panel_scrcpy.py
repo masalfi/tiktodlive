@@ -37,6 +37,8 @@ from app.scrcpy.manager import (
     platform_label,
     remove_vendor,
 )
+
+from app.i18n import tr
 from app.scrcpy.runner import ScrcpyRunner
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM
 
@@ -107,11 +109,11 @@ class ScrcpyPanel(QWidget):
         self.status_label = QLabel("memeriksa...")
         layout.addWidget(self.status_label, 1)
 
-        self.download_button = QPushButton("Unduh scrcpy")
+        self.download_button = QPushButton(tr("Unduh scrcpy"))
         self.download_button.clicked.connect(self._download)
         layout.addWidget(self.download_button)
 
-        self.redownload_button = QPushButton("Unduh ulang")
+        self.redownload_button = QPushButton(tr("Unduh ulang"))
         self.redownload_button.clicked.connect(self._redownload)
         layout.addWidget(self.redownload_button)
 
@@ -134,7 +136,7 @@ class ScrcpyPanel(QWidget):
             self.redownload_button.setVisible(info.source == "vendor")
         else:
             self.status_label.setText(
-                f"Belum tersedia untuk {platform_label()} - klik 'Unduh scrcpy' (sekali saja)"
+                tr("Belum tersedia untuk {os} - klik 'Unduh scrcpy' (sekali saja)", os=platform_label())
             )
             self.status_label.setStyleSheet(f"color:{TEXT_DIM};")
             self.download_button.setVisible(True)
@@ -162,7 +164,7 @@ class ScrcpyPanel(QWidget):
     def _redownload(self) -> None:
         confirm = QMessageBox.question(
             self, "Unduh ulang",
-            "Hapus scrcpy yang ada lalu unduh versi terbaru?",
+            tr("Hapus scrcpy yang ada lalu unduh versi terbaru?"),
             QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
         )
         if confirm != QMessageBox.Yes:
@@ -189,9 +191,9 @@ class ScrcpyPanel(QWidget):
         self.tools_installed.emit()
 
     def _on_download_failed(self, message: str) -> None:
-        self.status_label.setText(f"Gagal: {message[:120]}")
+        self.status_label.setText(tr("Gagal: {sebab}", sebab=message[:120]))
         self.status_label.setStyleSheet(f"color:{DANGER};")
-        QMessageBox.warning(self, "Unduhan gagal", message)
+        QMessageBox.warning(self, tr("Unduhan gagal"), message)
 
     def _on_download_finished(self) -> None:
         self.progress.setVisible(False)
@@ -202,10 +204,10 @@ class ScrcpyPanel(QWidget):
 
     def _build_tabs(self) -> QWidget:
         tabs = QTabWidget()
-        tabs.addTab(self._tab_display(), "Tampilan")
-        tabs.addTab(self._tab_window(), "Jendela")
-        tabs.addTab(self._tab_device(), "Device")
-        tabs.addTab(self._tab_wireless(), "Wireless")
+        tabs.addTab(self._tab_display(), tr("Tampilan"))
+        tabs.addTab(self._tab_window(), tr("Jendela"))
+        tabs.addTab(self._tab_device(), tr("Device"))
+        tabs.addTab(self._tab_wireless(), tr("Wireless"))
         return tabs
 
     def _combo(self, choices: list[str], current: str) -> QComboBox:
@@ -228,29 +230,29 @@ class ScrcpyPanel(QWidget):
         o = self.options
 
         self.max_size_combo = self._combo(MAX_SIZE_CHOICES, o.max_size)
-        form.addRow("Resolusi maks:", self.max_size_combo)
+        form.addRow(tr("Resolusi maks:"), self.max_size_combo)
 
         self.fps_combo = self._combo(FPS_CHOICES, o.max_fps)
-        form.addRow("FPS maks:", self.fps_combo)
+        form.addRow(tr("FPS maks:"), self.fps_combo)
 
         self.bitrate_combo = self._combo(BITRATE_CHOICES, o.bitrate)
-        form.addRow("Bitrate:", self.bitrate_combo)
+        form.addRow(tr("Bitrate:"), self.bitrate_combo)
 
         self.codec_combo = self._combo(CODEC_CHOICES, o.codec)
-        form.addRow("Codec video:", self.codec_combo)
+        form.addRow(tr("Codec video:"), self.codec_combo)
 
         self.orientation_combo = self._combo(ORIENTATION_CHOICES, o.orientation)
-        form.addRow("Rotasi tangkapan:", self.orientation_combo)
+        form.addRow(tr("Rotasi tangkapan:"), self.orientation_combo)
 
         self.crop_edit = QLineEdit(o.crop)
-        self.crop_edit.setPlaceholderText("mis. 1224:1440:0:0 (lebar:tinggi:x:y)")
+        self.crop_edit.setPlaceholderText(tr("mis. 1224:1440:0:0 (lebar:tinggi:x:y)"))
         self.crop_edit.editingFinished.connect(self._collect)
-        form.addRow("Crop:", self.crop_edit)
+        form.addRow(tr("Crop:"), self.crop_edit)
 
-        self.no_audio_check = self._check("Tanpa audio (disarankan)", o.no_audio)
+        self.no_audio_check = self._check(tr("Tanpa audio (disarankan)"), o.no_audio)
         form.addRow("", self.no_audio_check)
 
-        hint = QLabel("Resolusi & bitrate lebih kecil = lebih ringan dan tidak patah-patah.")
+        hint = QLabel(tr("Resolusi & bitrate lebih kecil = lebih ringan dan tidak patah-patah."))
         hint.setProperty("class", "hint")
         hint.setWordWrap(True)
         form.addRow("", hint)
@@ -263,15 +265,15 @@ class ScrcpyPanel(QWidget):
 
         self.title_edit = QLineEdit(o.window_title)
         self.title_edit.editingFinished.connect(self._collect)
-        form.addRow("Judul jendela:", self.title_edit)
+        form.addRow(tr("Judul jendela:"), self.title_edit)
 
-        self.ontop_check = self._check("Selalu di atas jendela lain", o.always_on_top)
+        self.ontop_check = self._check(tr("Selalu di atas jendela lain"), o.always_on_top)
         form.addRow("", self.ontop_check)
 
-        self.fullscreen_check = self._check("Layar penuh", o.fullscreen)
+        self.fullscreen_check = self._check(tr("Layar penuh"), o.fullscreen)
         form.addRow("", self.fullscreen_check)
 
-        self.borderless_check = self._check("Tanpa bingkai (untuk OBS)", o.borderless)
+        self.borderless_check = self._check(tr("Tanpa bingkai (untuk OBS)"), o.borderless)
         form.addRow("", self.borderless_check)
 
         size_row = QHBoxLayout()
@@ -283,7 +285,7 @@ class ScrcpyPanel(QWidget):
         self.win_h_spin.valueChanged.connect(self._collect)
         size_row.addWidget(self.win_w_spin); size_row.addWidget(QLabel("x")); size_row.addWidget(self.win_h_spin)
         size_row.addStretch(1)
-        form.addRow("Ukuran jendela:", size_row)
+        form.addRow(tr("Ukuran jendela:"), size_row)
 
         pos_row = QHBoxLayout()
         self.win_x_spin = QSpinBox(); self.win_x_spin.setRange(-1, 4000)
@@ -294,7 +296,7 @@ class ScrcpyPanel(QWidget):
         self.win_y_spin.valueChanged.connect(self._collect)
         pos_row.addWidget(self.win_x_spin); pos_row.addWidget(QLabel(",")); pos_row.addWidget(self.win_y_spin)
         pos_row.addStretch(1)
-        form.addRow("Posisi jendela:", pos_row)
+        form.addRow(tr("Posisi jendela:"), pos_row)
         return page
 
     def _tab_device(self) -> QWidget:
@@ -302,33 +304,33 @@ class ScrcpyPanel(QWidget):
         form = QFormLayout(page)
         o = self.options
 
-        self.screen_off_check = self._check("Matikan layar HP saat mulai", o.turn_screen_off)
+        self.screen_off_check = self._check(tr("Matikan layar HP saat mulai"), o.turn_screen_off)
         form.addRow("", self.screen_off_check)
 
         self.stay_awake_check = self._check("Cegah HP tidur", o.stay_awake)
         form.addRow("", self.stay_awake_check)
 
-        self.show_touches_check = self._check("Tampilkan sentuhan di layar HP", o.show_touches)
+        self.show_touches_check = self._check(tr("Tampilkan sentuhan di layar HP"), o.show_touches)
         form.addRow("", self.show_touches_check)
 
-        self.power_off_check = self._check("Matikan layar HP saat scrcpy ditutup", o.power_off_on_close)
+        self.power_off_check = self._check(tr("Matikan layar HP saat scrcpy ditutup"), o.power_off_on_close)
         form.addRow("", self.power_off_check)
 
-        self.no_control_check = self._check("Hanya lihat (tidak bisa dikontrol dari PC)", o.no_control)
+        self.no_control_check = self._check(tr("Hanya lihat (tidak bisa dikontrol dari PC)"), o.no_control)
         form.addRow("", self.no_control_check)
 
-        self.no_video_check = self._check("Tanpa tampilan (kontrol saja)", o.no_video)
+        self.no_video_check = self._check(tr("Tanpa tampilan (kontrol saja)"), o.no_video)
         form.addRow("", self.no_video_check)
 
         self.record_edit = QLineEdit(o.record_file)
-        self.record_edit.setPlaceholderText("kosongkan kalau tidak merekam, mis. rekaman.mp4")
+        self.record_edit.setPlaceholderText(tr("kosongkan kalau tidak merekam, mis. rekaman.mp4"))
         self.record_edit.editingFinished.connect(self._collect)
-        form.addRow("Rekam ke file:", self.record_edit)
+        form.addRow(tr("Rekam ke file:"), self.record_edit)
 
         self.extra_edit = QLineEdit(o.extra_args)
-        self.extra_edit.setPlaceholderText("argumen scrcpy tambahan, mis. --no-cleanup")
+        self.extra_edit.setPlaceholderText(tr("argumen scrcpy tambahan, mis. --no-cleanup"))
         self.extra_edit.editingFinished.connect(self._collect)
-        form.addRow("Argumen tambahan:", self.extra_edit)
+        form.addRow(tr("Argumen tambahan:"), self.extra_edit)
         return page
 
     def _tab_wireless(self) -> QWidget:
@@ -336,29 +338,25 @@ class ScrcpyPanel(QWidget):
         layout = QVBoxLayout(page)
 
         info = QLabel(
-            "Sambungkan HP lewat WiFi supaya tidak perlu kabel.\n\n"
-            "1. Colok HP dengan kabel USB dulu (sekali saja)\n"
-            "2. Pastikan HP dan komputer ini satu jaringan WiFi\n"
-            "3. Klik 'Aktifkan Wireless' di bawah\n"
-            "4. Setelah tersambung, kabel USB boleh dicabut"
+            tr("Sambungkan HP lewat WiFi supaya tidak perlu kabel.\n\n1. Colok HP dengan kabel USB dulu (sekali saja)\n2. Pastikan HP dan komputer ini satu jaringan WiFi\n3. Klik 'Aktifkan Wireless' di bawah\n4. Setelah tersambung, kabel USB boleh dicabut")
         )
         info.setWordWrap(True)
         info.setStyleSheet(f"color:{TEXT_DIM};")
         layout.addWidget(info)
 
         row = QHBoxLayout()
-        row.addWidget(QLabel("Port:"))
+        row.addWidget(QLabel(tr("Port:")))
         self.port_spin = QSpinBox()
         self.port_spin.setRange(1024, 65535)
         self.port_spin.setValue(int(self.settings.get("scrcpy", {}).get("wireless_port", 5555)))
         self.port_spin.valueChanged.connect(self._collect)
         row.addWidget(self.port_spin)
 
-        self.wifi_button = QPushButton("Aktifkan Wireless")
+        self.wifi_button = QPushButton(tr("Aktifkan Wireless"))
         self.wifi_button.clicked.connect(self._enable_wireless)
         row.addWidget(self.wifi_button)
 
-        self.wifi_disconnect_button = QPushButton("Putuskan")
+        self.wifi_disconnect_button = QPushButton(tr("Putuskan"))
         self.wifi_disconnect_button.clicked.connect(self._disconnect_wireless)
         row.addWidget(self.wifi_disconnect_button)
         row.addStretch(1)
@@ -374,7 +372,7 @@ class ScrcpyPanel(QWidget):
     # ------------------------------------------------------------ launch
 
     def _build_launch(self) -> QWidget:
-        box = QGroupBox("Jalankan")
+        box = QGroupBox(tr("Jalankan"))
         layout = QVBoxLayout(box)
 
         self.preview_label = QLabel()
@@ -383,12 +381,12 @@ class ScrcpyPanel(QWidget):
         layout.addWidget(self.preview_label)
 
         row = QHBoxLayout()
-        self.launch_button = QPushButton("Jalankan scrcpy")
+        self.launch_button = QPushButton(tr("Jalankan scrcpy"))
         self.launch_button.setStyleSheet("font-weight:bold;")
         self.launch_button.clicked.connect(self._launch)
         row.addWidget(self.launch_button)
 
-        self.stop_button = QPushButton("Hentikan")
+        self.stop_button = QPushButton(tr("Hentikan"))
         self.stop_button.clicked.connect(self._stop)
         row.addWidget(self.stop_button)
         row.addStretch(1)
@@ -451,21 +449,21 @@ class ScrcpyPanel(QWidget):
 
     def _stop(self) -> None:
         stopped = self.runner.stop(self.adb.serial)
-        self.launch_status.setText("scrcpy dihentikan." if stopped else "Tidak ada yang berjalan.")
+        self.launch_status.setText(tr("scrcpy dihentikan.") if stopped else tr("Tidak ada yang berjalan."))
         self.launch_status.setStyleSheet(f"color:{TEXT_DIM};")
 
     # ---------------------------------------------------------- wireless
 
     def _enable_wireless(self) -> None:
         if not self.adb.available:
-            self.wifi_status.setText("adb tidak ditemukan.")
+            self.wifi_status.setText(tr("adb tidak ditemukan."))
             self.wifi_status.setStyleSheet(f"color:{DANGER};")
             return
         if self._wifi_worker is not None and self._wifi_worker.isRunning():
             return
 
         self.wifi_button.setEnabled(False)
-        self.wifi_status.setText("Mengaktifkan... (butuh beberapa detik)")
+        self.wifi_status.setText(tr("Mengaktifkan... (butuh beberapa detik)"))
         self.wifi_status.setStyleSheet(f"color:{ACCENT};")
 
         self._wifi_worker = WirelessWorker(self.adb, self.port_spin.value())
@@ -476,7 +474,7 @@ class ScrcpyPanel(QWidget):
     def _on_wireless(self, ok: bool, message: str) -> None:
         if ok:
             self.wifi_status.setText(
-                f"Tersambung: {message}\nKabel USB sudah boleh dicabut."
+                tr("Tersambung: {pesan}\nKabel USB sudah boleh dicabut.", pesan=message)
             )
             self.wifi_status.setStyleSheet(f"color:{OK};")
             self.serial_changed.emit(message)
@@ -488,7 +486,7 @@ class ScrcpyPanel(QWidget):
     def _disconnect_wireless(self) -> None:
         serial = self.adb.serial
         if ":" not in (serial or ""):
-            self.wifi_status.setText("Device aktif bukan koneksi wireless.")
+            self.wifi_status.setText(tr("Device aktif bukan koneksi wireless."))
             self.wifi_status.setStyleSheet(f"color:{TEXT_DIM};")
             return
         ok, message = disconnect_wireless(self.adb, serial)

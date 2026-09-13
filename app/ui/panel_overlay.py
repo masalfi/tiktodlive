@@ -27,6 +27,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.actions.host import NO_LISTENER
+from app.i18n import tr
+
 from app.overlay.server import DEFAULT_CHANNEL
 from app.ui.theme import ACCENT, DANGER, OK, TEXT_DIM, WARN
 
@@ -107,7 +110,7 @@ class OverlayPanel(QWidget):
     # ------------------------------------------------------------ status
 
     def _build_status(self) -> QWidget:
-        box = QGroupBox("Server overlay")
+        box = QGroupBox(tr("Server overlay"))
         layout = QVBoxLayout(box)
         layout.setSpacing(6)
 
@@ -118,7 +121,7 @@ class OverlayPanel(QWidget):
         # combo yang bisa diketik: pilihan yang sudah dipakai muncul otomatis,
         # tapi channel baru tetap bisa diketik langsung.
         ch_row = QHBoxLayout()
-        ch_row.addWidget(QLabel("Channel:"))
+        ch_row.addWidget(QLabel(tr("Channel:")))
 
         self.channel_combo = QComboBox()
         self.channel_combo.setEditable(True)
@@ -128,18 +131,18 @@ class OverlayPanel(QWidget):
         self.channel_combo.currentTextChanged.connect(self._on_channel_changed)
         ch_row.addWidget(self.channel_combo, 1)
 
-        self.copy_button = QPushButton("Salin URL")
-        self.copy_button.setToolTip("Salin URL untuk ditempel ke OBS Browser Source")
+        self.copy_button = QPushButton(tr("Salin URL"))
+        self.copy_button.setToolTip(tr("Salin URL untuk ditempel ke OBS Browser Source"))
         self.copy_button.clicked.connect(self._copy_url)
         ch_row.addWidget(self.copy_button)
 
-        self.clear_button = QPushButton("Bersihkan")
-        self.clear_button.setToolTip("Hapus alert & efek di channel ini")
+        self.clear_button = QPushButton(tr("Bersihkan"))
+        self.clear_button.setToolTip(tr("Hapus alert & efek di channel ini"))
         self.clear_button.clicked.connect(self._clear_overlay)
         ch_row.addWidget(self.clear_button)
 
-        self.clear_all_button = QPushButton("Semua")
-        self.clear_all_button.setToolTip("Bersihkan semua channel sekaligus")
+        self.clear_all_button = QPushButton(tr("Semua"))
+        self.clear_all_button.setToolTip(tr("Bersihkan semua channel sekaligus"))
         self.clear_all_button.clicked.connect(self._clear_all_channels)
         ch_row.addWidget(self.clear_all_button)
         layout.addLayout(ch_row)
@@ -207,8 +210,8 @@ class OverlayPanel(QWidget):
 
     def refresh_status(self) -> None:
         if not self.overlay.running:
-            error = self.overlay.error or "tidak aktif"
-            self.status_label.setText(f"Server overlay mati: {error}")
+            error = self.overlay.error or tr("tidak aktif")
+            self.status_label.setText(tr("Server overlay mati: {sebab}", sebab=error))
             self.status_label.setStyleSheet(f"color:{DANGER};")
             self.url_label.setText("-")
             self.channel_state.setText("-")
@@ -216,7 +219,7 @@ class OverlayPanel(QWidget):
             return
 
         total = self.overlay.client_count
-        self.status_label.setText(f"Server aktif  \u2014  {total} overlay terbuka")
+        self.status_label.setText(tr("Server aktif  \u2014  {n} overlay terbuka", n=total))
         self.status_label.setStyleSheet(f"color:{OK if total else TEXT_DIM};")
 
         channel = self.current_channel()
@@ -227,12 +230,13 @@ class OverlayPanel(QWidget):
         name = normalize_channel(channel)
         count = self.overlay.channels().get(name, 0)
         if count:
-            self.channel_state.setText(f"\u25cf {count} overlay terhubung di channel '{name}'")
+            self.channel_state.setText(
+                tr("\u25cf {n} overlay terhubung di channel '{channel}'", n=count, channel=name))
             self.channel_state.setStyleSheet(f"color:{OK};")
         else:
             self.channel_state.setText(
-                f"Belum ada Browser Source untuk channel '{name}' \u2014 "
-                "tempel URL di atas ke OBS."
+                tr("Belum ada Browser Source untuk channel '{channel}' \u2014 tempel URL di atas ke OBS.",
+                   channel=name)
             )
             self.channel_state.setStyleSheet(f"color:{WARN};")
 
@@ -250,7 +254,7 @@ class OverlayPanel(QWidget):
 
     def _clear_overlay(self) -> None:
         if not self.overlay.running:
-            self._report(False, "Server overlay tidak aktif.")
+            self._report(False, tr("Server overlay tidak aktif."))
             return
         from app.overlay.server import normalize_channel
 
@@ -260,7 +264,7 @@ class OverlayPanel(QWidget):
 
     def _clear_all_channels(self) -> None:
         if not self.overlay.running:
-            self._report(False, "Server overlay tidak aktif.")
+            self._report(False, tr("Server overlay tidak aktif."))
             return
         from app.overlay.server import ALL_CHANNELS
 
@@ -281,67 +285,67 @@ class OverlayPanel(QWidget):
         outer.setSpacing(8)
 
         # ---- efek suara
-        sfx_box = QGroupBox("Efek suara (sekali jalan)")
+        sfx_box = QGroupBox(tr("Efek suara (sekali jalan)"))
         sfx_form = QFormLayout(sfx_box)
 
         sfx_row = QHBoxLayout()
         self.sfx_edit = QLineEdit(saved.get("sound_file", ""))
-        self.sfx_edit.setPlaceholderText("pilih file mp3/wav dari mana saja di komputer")
+        self.sfx_edit.setPlaceholderText(tr("pilih file mp3/wav dari mana saja di komputer"))
         self.sfx_edit.editingFinished.connect(self._save)
         sfx_row.addWidget(self.sfx_edit, 1)
-        sfx_browse = QPushButton("Pilih...")
+        sfx_browse = QPushButton(tr("Pilih..."))
         sfx_browse.clicked.connect(lambda: self._browse(self.sfx_edit))
         sfx_row.addWidget(sfx_browse)
-        sfx_form.addRow("File:", sfx_row)
+        sfx_form.addRow(tr("File:"), sfx_row)
 
         sfx_ctl = QHBoxLayout()
         self.sfx_volume = self._volume(saved.get("sound_volume", 1.0))
         sfx_ctl.addWidget(self.sfx_volume)
         sfx_ctl.addSpacing(12)
-        self.sfx_test = QPushButton("Uji suara")
+        self.sfx_test = QPushButton(tr("Uji suara"))
         self.sfx_test.clicked.connect(self._test_sound)
         sfx_ctl.addWidget(self.sfx_test)
         sfx_ctl.addStretch(1)
-        sfx_form.addRow("Volume:", sfx_ctl)
+        sfx_form.addRow(tr("Volume:"), sfx_ctl)
         outer.addWidget(sfx_box)
 
         # ---- musik latar
-        music_box = QGroupBox("Musik latar (diulang terus)")
+        music_box = QGroupBox(tr("Musik latar (diulang terus)"))
         music_form = QFormLayout(music_box)
 
         music_row = QHBoxLayout()
         self.music_edit = QLineEdit(saved.get("music_file", ""))
-        self.music_edit.setPlaceholderText("musik yang diputar berulang selama live")
+        self.music_edit.setPlaceholderText(tr("musik yang diputar berulang selama live"))
         self.music_edit.editingFinished.connect(self._save)
         music_row.addWidget(self.music_edit, 1)
-        music_browse = QPushButton("Pilih...")
+        music_browse = QPushButton(tr("Pilih..."))
         music_browse.clicked.connect(lambda: self._browse(self.music_edit))
         music_row.addWidget(music_browse)
-        music_form.addRow("File:", music_row)
+        music_form.addRow(tr("File:"), music_row)
 
         music_ctl = QHBoxLayout()
         self.music_volume = self._volume(saved.get("music_volume", 0.5))
         music_ctl.addWidget(self.music_volume)
         music_ctl.addSpacing(12)
-        music_ctl.addWidget(QLabel("Fade:"))
+        music_ctl.addWidget(QLabel(tr("Fade:")))
         self.fade_spin = QSpinBox()
         self.fade_spin.setRange(0, 10000)
         self.fade_spin.setSingleStep(100)
-        self.fade_spin.setSuffix(" ms")
+        self.fade_spin.setSuffix(tr(" ms"))
         self.fade_spin.setValue(int(saved.get("music_fade", 800)))
         self.fade_spin.valueChanged.connect(self._save)
         music_ctl.addWidget(self.fade_spin)
         music_ctl.addSpacing(12)
-        self.loop_check = QCheckBox("Ulangi")
+        self.loop_check = QCheckBox(tr("Ulangi"))
         self.loop_check.setChecked(bool(saved.get("music_loop", True)))
         self.loop_check.toggled.connect(self._save)
         music_ctl.addWidget(self.loop_check)
         music_ctl.addStretch(1)
-        music_form.addRow("Volume:", music_ctl)
+        music_form.addRow(tr("Volume:"), music_ctl)
 
         buttons = QHBoxLayout()
         for label, slot in (("Putar", self._music_play),
-                            ("Ubah volume", self._music_volume),
+                            (tr("Ubah volume"), self._music_volume),
                             ("Hentikan", self._music_stop)):
             button = QPushButton(label)
             button.clicked.connect(slot)
@@ -364,8 +368,8 @@ class OverlayPanel(QWidget):
         start = (str(Path(self.image_edit.text()).parent)
                  if self.image_edit.text().strip() else str(Path.home()))
         path, _ = QFileDialog.getOpenFileName(
-            self, "Pilih gambar", start,
-            "Gambar (*.png *.jpg *.jpeg *.gif *.webp);;Semua file (*)",
+            self, tr("Pilih gambar"), start,
+            tr("Gambar (*.png *.jpg *.jpeg *.gif *.webp);;Semua file (*)"),
         )
         if path:
             self.image_edit.setText(path)
@@ -373,7 +377,7 @@ class OverlayPanel(QWidget):
 
     def _browse(self, target: QLineEdit) -> None:
         start = str(Path(target.text()).parent) if target.text().strip() else str(Path.home())
-        path, _ = QFileDialog.getOpenFileName(self, "Pilih file audio", start, AUDIO_FILTER)
+        path, _ = QFileDialog.getOpenFileName(self, tr("Pilih file audio"), start, AUDIO_FILTER)
         if path:
             target.setText(path)
             self._save()
@@ -381,7 +385,7 @@ class OverlayPanel(QWidget):
     # ------------------------------------------------------------ efek
 
     def _build_effects(self, saved: dict) -> QWidget:
-        box = QGroupBox("Efek visual")
+        box = QGroupBox(tr("Efek visual"))
         form = QFormLayout(box)
 
         self.effect_combo = QComboBox()
@@ -390,72 +394,72 @@ class OverlayPanel(QWidget):
         index = self.effect_combo.findData(saved.get("effect", "confetti"))
         self.effect_combo.setCurrentIndex(index if index >= 0 else 0)
         self.effect_combo.currentIndexChanged.connect(self._on_effect_changed)
-        form.addRow("Efek:", self.effect_combo)
+        form.addRow(tr("Efek:"), self.effect_combo)
 
         self.count_spin = QSpinBox()
         self.count_spin.setRange(1, 400)
         self.count_spin.setValue(int(saved.get("effect_count", 80)))
         self.count_spin.valueChanged.connect(self._save)
-        form.addRow("Jumlah:", self.count_spin)
+        form.addRow(tr("Jumlah:"), self.count_spin)
 
         self.duration_spin = QSpinBox()
         self.duration_spin.setRange(60, 5000)
         self.duration_spin.setSingleStep(50)
-        self.duration_spin.setSuffix(" ms")
+        self.duration_spin.setSuffix(tr(" ms"))
         self.duration_spin.setValue(int(saved.get("effect_duration", 500)))
         self.duration_spin.valueChanged.connect(self._save)
-        form.addRow("Durasi:", self.duration_spin)
+        form.addRow(tr("Durasi:"), self.duration_spin)
 
         self.color_edit = QLineEdit(saved.get("effect_color", "#ff4d94"))
         self.color_edit.setPlaceholderText("#ff4d94")
         self.color_edit.editingFinished.connect(self._save)
-        form.addRow("Warna:", self.color_edit)
+        form.addRow(tr("Warna:"), self.color_edit)
 
         self.text_edit = QLineEdit(saved.get("effect_text", "Terima kasih!"))
         self.text_edit.editingFinished.connect(self._save)
-        form.addRow("Teks:", self.text_edit)
+        form.addRow(tr("Teks:"), self.text_edit)
 
         self.source_combo = QComboBox()
         for value, label in [("emoji", "Emoji"),
-                             ("gift", "Ikon gift yang masuk"),
-                             ("gambar", "Gambar dari komputer")]:
+                             ("gift", tr("Ikon gift yang masuk")),
+                             ("gambar", tr("Gambar dari komputer"))]:
             self.source_combo.addItem(label, value)
         index = self.source_combo.findData(saved.get("effect_source", "emoji"))
         self.source_combo.setCurrentIndex(index if index >= 0 else 0)
         self.source_combo.currentIndexChanged.connect(self._on_effect_changed)
-        form.addRow("Hujan pakai:", self.source_combo)
+        form.addRow(tr("Hujan pakai:"), self.source_combo)
 
         self.emoji_edit = QLineEdit(saved.get("effect_emoji", "\U0001F381"))
         self.emoji_edit.setMaxLength(8)
         self.emoji_edit.editingFinished.connect(self._save)
-        form.addRow("Emoji:", self.emoji_edit)
+        form.addRow(tr("Emoji:"), self.emoji_edit)
 
         self.image_row = QWidget()
         image_row = QHBoxLayout(self.image_row)
         image_row.setContentsMargins(0, 0, 0, 0)
         self.image_edit = QLineEdit(saved.get("effect_image", ""))
-        self.image_edit.setPlaceholderText("png/jpg/gif/webp dari mana saja di komputer")
+        self.image_edit.setPlaceholderText(tr("png/jpg/gif/webp dari mana saja di komputer"))
         self.image_edit.editingFinished.connect(self._save)
         image_row.addWidget(self.image_edit, 1)
-        pick = QPushButton("Pilih...")
+        pick = QPushButton(tr("Pilih..."))
         pick.clicked.connect(self._browse_image)
         image_row.addWidget(pick)
-        form.addRow("Gambar:", self.image_row)
+        form.addRow(tr("Gambar:"), self.image_row)
 
         self.size_spin = QSpinBox()
         self.size_spin.setRange(16, 200)
         self.size_spin.setSingleStep(4)
-        self.size_spin.setSuffix(" px")
+        self.size_spin.setSuffix(tr(" px"))
         self.size_spin.setValue(int(saved.get("effect_size", 44)))
         self.size_spin.valueChanged.connect(self._save)
-        form.addRow("Ukuran:", self.size_spin)
+        form.addRow(tr("Ukuran:"), self.size_spin)
 
         row = QHBoxLayout()
-        test = QPushButton("Uji efek")
+        test = QPushButton(tr("Uji efek"))
         test.setStyleSheet("font-weight:bold;")
         test.clicked.connect(self._test_effect)
         row.addWidget(test)
-        alert = QPushButton("Uji alert")
+        alert = QPushButton(tr("Uji alert"))
         alert.clicked.connect(self._test_alert)
         row.addWidget(alert)
         row.addStretch(1)
@@ -511,7 +515,7 @@ class OverlayPanel(QWidget):
         self.result_label.setText(message)
         if not ok:
             color = DANGER
-        elif "belum ada overlay" in message:
+        elif tr(NO_LISTENER) in message:
             # Aksi berhasil dikirim, tapi tidak ada yang menerima - itu
             # hampir selalu berarti Browser Source-nya belum dibuka.
             color = WARN
@@ -524,7 +528,7 @@ class OverlayPanel(QWidget):
 
         handler = HANDLERS.get(action_type)
         if handler is None:
-            self._report(False, f"Aksi {action_type} tidak terdaftar.")
+            self._report(False, tr("Aksi {aksi} tidak terdaftar.", aksi=action_type))
             return
         result = handler(self.host, coerce_params(action_type, params))
         self._report(result.ok, result.message)

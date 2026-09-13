@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from app.actions.base import ActionSpec
+from app.i18n import tr
 from app.ui.theme import TEXT_DIM
 
 
@@ -102,7 +103,7 @@ class ParamForm(QWidget):
             return
 
         if spec.help:
-            hint = QLabel(spec.help)
+            hint = QLabel(tr(spec.help))
             hint.setWordWrap(True)
             hint.setProperty("class", "hint")
             # Satu argumen = membentang dua kolom. Kalau dimasukkan ke
@@ -138,7 +139,7 @@ class ParamForm(QWidget):
                     widget.setCompleter(completer)
                 else:
                     widget.lineEdit().setPlaceholderText(
-                        "kalibrasi dulu di tab Game")
+                        tr("kalibrasi dulu di tab Game"))
                 _select_button(widget, str(current) if current else "")
             elif p.kind == "package":
                 # Daftar aplikasi terpasang, tapi tetap bisa diketik sendiri
@@ -156,7 +157,7 @@ class ParamForm(QWidget):
                     widget.setCompleter(completer)
                     widget.lineEdit().setPlaceholderText(f"{len(packages)} aplikasi terdeteksi")
                 else:
-                    widget.lineEdit().setPlaceholderText("mis. com.mobile.legends")
+                    widget.lineEdit().setPlaceholderText(tr("mis. com.mobile.legends"))
                 widget.setCurrentText(str(current) if current else "")
             elif p.kind == "choice":
                 widget = QComboBox()
@@ -186,13 +187,13 @@ class ParamForm(QWidget):
             else:
                 widget = QLineEdit(str(current) if current is not None else "")
                 if p.help:
-                    widget.setPlaceholderText(p.help)
+                    widget.setPlaceholderText(tr(p.help))
 
             if p.help and p.kind not in ("str", "file"):
-                widget.setToolTip(p.help)
+                widget.setToolTip(tr(p.help))
 
             self._widgets[p.name] = widget
-            self._layout.addRow(f"{p.label}:", widget)
+            self._layout.addRow(f"{tr(p.label)}:", widget)
 
     def values(self) -> dict[str, Any]:
         out: dict[str, Any] = {}

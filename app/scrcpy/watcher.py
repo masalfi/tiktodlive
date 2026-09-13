@@ -21,6 +21,7 @@ import time
 
 from PySide6.QtCore import QThread, Signal
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 # Status device
@@ -115,7 +116,7 @@ class DeviceWatcher(QThread):
                 self._state = OFFLINE
                 self._lost_at = time.time()
                 self.state_changed.emit(
-                    OFFLINE, "Device terputus (reboot atau kabel lepas). Aksi dijeda."
+                    OFFLINE, tr("Device terputus (reboot atau kabel lepas). Aksi dijeda.")
                 )
                 self.device_lost.emit(self.serial)
 
@@ -127,8 +128,8 @@ class DeviceWatcher(QThread):
                     self._state = OFFLINE
                     self.state_changed.emit(
                         OFFLINE,
-                        "Device belum kembali setelah 4 menit. "
-                        "Colok kabel USB, atau sambungkan lagi lewat tab Wireless.",
+                        tr("Device belum kembali setelah 4 menit. "
+                           "Colok kabel USB, atau sambungkan lagi lewat tab Wireless."),
                     )
                     self._lost_at = time.time()     # jangan spam pesan ini
                 else:

@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.models import ActionResult, Job, LiveEvent
 from app.ui.theme import DANGER, OK, TEXT_DIM
 
@@ -46,20 +48,20 @@ class LogPanel(QWidget):
 
         # ---- toolbar
         bar = QHBoxLayout()
-        self.autoscroll_check = QCheckBox("Auto-scroll")
+        self.autoscroll_check = QCheckBox(tr("Auto-scroll"))
         self.autoscroll_check.setChecked(True)
         bar.addWidget(self.autoscroll_check)
 
-        self.show_join_check = QCheckBox("Tampilkan event join")
+        self.show_join_check = QCheckBox(tr("Tampilkan event join"))
         self.show_join_check.setChecked(False)
         bar.addWidget(self.show_join_check)
 
-        self.show_like_check = QCheckBox("Tampilkan event like")
+        self.show_like_check = QCheckBox(tr("Tampilkan event like"))
         self.show_like_check.setChecked(False)
         bar.addWidget(self.show_like_check)
 
         bar.addStretch(1)
-        clear_button = QPushButton("Bersihkan")
+        clear_button = QPushButton(tr("Bersihkan"))
         clear_button.clicked.connect(self._clear)
         bar.addWidget(clear_button)
         root.addLayout(bar)
@@ -67,13 +69,13 @@ class LogPanel(QWidget):
         # ---- dua kolom
         splitter = QSplitter(Qt.Horizontal)
 
-        left_box = QGroupBox("Event masuk")
+        left_box = QGroupBox(tr("Event masuk"))
         left_layout = QVBoxLayout(left_box)
         self.event_list = QListWidget()
         left_layout.addWidget(self.event_list)
         splitter.addWidget(left_box)
 
-        right_box = QGroupBox("Aksi & sistem")
+        right_box = QGroupBox(tr("Aksi & sistem"))
         right_layout = QVBoxLayout(right_box)
         self.action_list = QListWidget()
         right_layout.addWidget(self.action_list)

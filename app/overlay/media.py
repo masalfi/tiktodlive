@@ -18,6 +18,7 @@ import mimetypes
 import threading
 from pathlib import Path
 
+from app.i18n import tr
 log = logging.getLogger(__name__)
 
 # Tipe yang boleh disajikan. Selain ini ditolak.
@@ -111,31 +112,32 @@ class MediaRegistry:
         Lempar MediaError dengan pesan yang jelas kalau file bermasalah.
         """
         if not raw_path or not str(raw_path).strip():
-            raise MediaError("Path file kosong")
+            raise MediaError(tr("Path file kosong"))
 
         path = Path(str(raw_path)).expanduser()
         try:
             path = path.resolve(strict=True)
         except (OSError, RuntimeError) as exc:
-            raise MediaError(f"File tidak ditemukan: {raw_path}") from exc
+            raise MediaError(tr("File tidak ditemukan: {path}", path=raw_path)) from exc
 
         if not path.is_file():
-            raise MediaError(f"Bukan file: {path}")
+            raise MediaError(tr("Bukan file: {path}", path=path))
 
         kind = kind_of(path)
         if not kind:
             raise MediaError(
-                f"Format '{path.suffix}' tidak didukung. "
-                f"Audio: mp3/wav/ogg/m4a - Gambar: png/jpg/gif/webp - Video: mp4/webm"
+                tr("Format '{ext}' tidak didukung. "
+                   "Audio: mp3/wav/ogg/m4a - Gambar: png/jpg/gif/webp - Video: mp4/webm",
+                   ext=path.suffix)
             )
 
         try:
             size = path.stat().st_size
         except OSError as exc:
-            raise MediaError(f"Tidak bisa membaca file: {exc}") from exc
+            raise MediaError(tr("Tidak bisa membaca file: {sebab}", sebab=exc)) from exc
 
         if size == 0:
-            raise MediaError(f"File kosong: {path.name}")
+            raise MediaError(tr("File kosong: {nama}", nama=path.name))
         if size > MAX_BYTES:
             raise MediaError(
                 f"File terlalu besar ({size / 1048576:.0f} MB, maks {MAX_BYTES // 1048576} MB)"

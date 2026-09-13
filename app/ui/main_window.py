@@ -17,6 +17,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from app.i18n import tr
+
 from app.actions.adb import AdbExecutor, register_adb_actions
 from app.actions.apps import register_app_actions
 from app.actions.game import register_game_actions
@@ -57,7 +59,7 @@ class MainWindow(QMainWindow):
 
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("TikTok Live Controller")
+        self.setWindowTitle(tr("TikTok Live Controller"))
         self.resize(940, 620)
         self.setMinimumSize(820, 560)
 
@@ -114,8 +116,8 @@ class MainWindow(QMainWindow):
 
         if not getattr(self, "_rules_ok", True):
             self.log_panel.add_system(
-                f"{self._rules_error} - perbaiki file itu, "
-                "atau hapus supaya dibuat ulang.", error=True,
+                tr("{sebab} - perbaiki file itu, atau hapus supaya dibuat ulang.", sebab=self._rules_error),
+                error=True,
             )
 
         self._sync_overlay_channels()
@@ -126,8 +128,8 @@ class MainWindow(QMainWindow):
 
         if not self.adb.available:
             self.log_panel.add_system(
-                "adb tidak ditemukan. Install Android platform-tools, "
-                "atau isi adb.path di config/settings.yaml.", error=True,
+                tr("adb tidak ditemukan. Install Android platform-tools, atau isi adb.path di config/settings.yaml."),
+                error=True,
             )
 
     # ------------------------------------------------------------------- UI
@@ -151,37 +153,36 @@ class MainWindow(QMainWindow):
         self.home_panel = HomePanel(self)
         self.home_panel.open_tab.connect(self._open_tab_by_name)
 
-        self.tabs.addTab(self.home_panel, "Mulai")
-        self.tabs.addTab(self.connect_panel, "Koneksi")
-        self.tabs.addTab(self.rules_panel, "Rules")
-        self.tabs.addTab(self.devices_panel, "Devices")
+        self.tabs.addTab(self.home_panel, tr("Mulai"))
+        self.tabs.addTab(self.connect_panel, tr("Koneksi"))
+        self.tabs.addTab(self.rules_panel, tr("Rules"))
+        self.tabs.addTab(self.devices_panel, tr("Devices"))
         self.tabs.addTab(self.scrcpy_panel, "scrcpy")
-        self.tabs.addTab(self.game_panel, "Game")
-        self.tabs.addTab(self.overlay_panel, "Overlay")
-        self.tabs.addTab(self.gifts_panel, "Gift")
-        self.tabs.addTab(self.log_panel, "Log")
+        self.tabs.addTab(self.game_panel, tr("Game"))
+        self.tabs.addTab(self.overlay_panel, tr("Overlay"))
+        self.tabs.addTab(self.gifts_panel, tr("Gift"))
+        self.tabs.addTab(self.log_panel, tr("Log"))
         self.setCentralWidget(self.tabs)
 
         # Status bar permanen: status live, antrian, dan tombol PANIC.
         bar = self.statusBar()
-        self.status_label = QLabel("Belum terhubung")
+        self.status_label = QLabel(tr("Belum terhubung"))
         bar.addWidget(self.status_label, 1)
 
-        self.device_label = QLabel("Device online")
+        self.device_label = QLabel(tr("Device online"))
         self.device_label.setStyleSheet(f"color:{TEXT_DIM};")
         bar.addPermanentWidget(self.device_label)
 
-        self.queue_label = QLabel("Antrian: 0")
+        self.queue_label = QLabel(tr("Antrian: 0"))
         bar.addPermanentWidget(self.queue_label)
 
-        self.overlay_label = QLabel("Overlay: mati")
+        self.overlay_label = QLabel(tr("Overlay: mati"))
         bar.addPermanentWidget(self.overlay_label)
 
-        self.panic_button = QPushButton("PANIC - HENTIKAN SEMUA")
+        self.panic_button = QPushButton(tr("PANIC - HENTIKAN SEMUA"))
         self.panic_button.setCheckable(True)
         self.panic_button.setStyleSheet(
-            "QPushButton { background:#c62828; color:white; font-weight:bold; padding:6px 14px; border-radius:4px; }"
-            "QPushButton:checked { background:#7b1fa2; }"
+            "QPushButton { background:#c62828; color:white; font-weight:bold; padding:6px 14px; border-radius:4px; }QPushButton:checked { background:#7b1fa2; }"
         )
         bar.addPermanentWidget(self.panic_button)
 
@@ -230,8 +231,8 @@ class MainWindow(QMainWindow):
     def _on_device_state(self, state: str, message: str) -> None:
         self.log_panel.add_system(message, error=(state == OFFLINE))
         colors = {ONLINE: OK, RECONNECTING: "#e0a52e", OFFLINE: DANGER}
-        labels = {ONLINE: "Device online", RECONNECTING: "Device menyambung ulang...",
-                  OFFLINE: "Device offline"}
+        labels = {ONLINE: tr("Device online"), RECONNECTING: tr("Device menyambung ulang..."),
+                  OFFLINE: tr("Device offline")}
         self.device_label.setText(labels.get(state, state))
         self.device_label.setStyleSheet(f"color:{colors.get(state, TEXT_DIM)};")
 
@@ -263,8 +264,8 @@ class MainWindow(QMainWindow):
         for pending in getattr(self, "_scrcpy_pending", []):
             ok, message = self.scrcpy_panel.runner.restart(pending)
             self.log_panel.add_system(
-                f"scrcpy dijalankan ulang: {message}" if ok
-                else f"Gagal menjalankan ulang scrcpy: {message}",
+                tr("scrcpy dijalankan ulang: {pesan}", pesan=message) if ok
+                else tr("Gagal menjalankan ulang scrcpy: {pesan}", pesan=message),
                 error=not ok,
             )
         self._scrcpy_pending = []
@@ -276,10 +277,10 @@ class MainWindow(QMainWindow):
         self._gift_worker: GiftFetchWorker | None = None
 
         if self._gift_cache_loaded:
-            self.log_panel.add_system(f"Katalog gift: {len(CATALOG)} gift (dari cache)")
+            self.log_panel.add_system(tr("Katalog gift: {n} gift (dari cache)", n=len(CATALOG)))
             if not CATALOG.is_stale:
                 return
-            self.log_panel.add_system("Katalog gift sudah lama, menyegarkan...")
+            self.log_panel.add_system(tr("Katalog gift sudah lama, menyegarkan..."))
         else:
             self.log_panel.add_system("Mengambil daftar gift TikTok...")
 
@@ -296,14 +297,15 @@ class MainWindow(QMainWindow):
     def _on_gifts_failed(self, message: str) -> None:
         if CATALOG.is_empty:
             self.log_panel.add_system(
-                f"Gagal mengambil daftar gift ({message}). "
-                "Nama gift masih bisa diketik manual di editor rule.", error=True,
+                tr("Gagal mengambil daftar gift ({sebab}). Nama gift masih bisa diketik manual di editor rule.",
+                   sebab=message),
+                error=True,
             )
         else:
-            self.log_panel.add_system(f"Gagal menyegarkan gift, pakai daftar lama ({message})")
+            self.log_panel.add_system(tr("Gagal menyegarkan gift, pakai daftar lama ({sebab})", sebab=message))
 
     def _on_room_gifts(self, added: int) -> None:
-        self.log_panel.add_system(f"{added} gift khusus room ini ditambahkan ke katalog")
+        self.log_panel.add_system(tr("{n} gift khusus room ini ditambahkan ke katalog", n=added))
         self.gifts_panel.reload()
 
     # -------------------------------------------------------------- overlay
@@ -313,9 +315,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, "overlay_panel"):
             self.overlay_panel.refresh_status()
         if self.overlay.running:
-            self.log_panel.add_system(f"Overlay aktif: {self.overlay.url}")
+            self.log_panel.add_system(tr("Overlay aktif: {url}", url=self.overlay.url))
         else:
-            self.log_panel.add_system(f"Overlay gagal: {self.overlay.error}", error=True)
+            self.log_panel.add_system(tr("Overlay gagal: {sebab}", sebab=self.overlay.error), error=True)
 
     # ----------------------------------------------------------------- live
 
@@ -323,7 +325,7 @@ class MainWindow(QMainWindow):
         if self.worker and self.worker.isRunning():
             return
         if not username:
-            QMessageBox.warning(self, "Username kosong", "Isi username TikTok dulu.")
+            QMessageBox.warning(self, tr("Username kosong"), tr("Isi username TikTok dulu."))
             return
 
         self.settings["tiktok"]["username"] = username
@@ -343,18 +345,18 @@ class MainWindow(QMainWindow):
 
         if use_euler and not api_key:
             QMessageBox.warning(
-                self, "Butuh API key",
-                "Backend EulerStream memerlukan Sign API key. "
-                "Isi di tab Koneksi atau pilih backend 'tiktoklive'.",
+                self, tr("Butuh API key"),
+                tr("Backend EulerStream memerlukan Sign API key. Isi di tab Koneksi "
+                   "atau pilih backend 'tiktoklive'."),
             )
             return
 
         if use_euler:
             self.worker = EulerWorker(username, api_key, auto_reconnect)
-            self.log_panel.add_system("Backend: EulerStream (WebSocket terkelola)")
+            self.log_panel.add_system(tr("Backend: EulerStream (WebSocket terkelola)"))
         else:
             self.worker = TikTokWorker(username, api_key, auto_reconnect)
-            self.log_panel.add_system("Backend: TikTokLive (koneksi langsung)")
+            self.log_panel.add_system(tr("Backend: TikTokLive (koneksi langsung)"))
         self.worker.event_received.connect(self._on_live_event)
         self.worker.status_changed.connect(self._on_status)
         self.worker.viewer_count.connect(self.connect_panel.set_viewer_count)
@@ -388,14 +390,14 @@ class MainWindow(QMainWindow):
 
         passed, blocked = self.engine.match(event)
         for rule, reason in blocked:
-            self.log_panel.add_system(f"[{rule.name}] dilewati: {reason}")
+            self.log_panel.add_system(tr("[{rule}] dilewati: {sebab}", rule=rule.name, sebab=reason))
 
         for rule in passed:
             accepted, reason = self.queue.submit(rule, event)
             if accepted:
                 self.engine.mark_fired(rule)
             else:
-                self.log_panel.add_system(f"[{rule.name}] ditolak: {reason}", error=True)
+                self.log_panel.add_system(tr("[{rule}] ditolak: {sebab}", rule=rule.name, sebab=reason), error=True)
 
     def _test_rule(self, rule: Rule) -> None:
         """Test Run: jalankan rule tanpa menunggu event asli."""
@@ -406,10 +408,10 @@ class MainWindow(QMainWindow):
         )
         accepted, reason = self.queue.submit(rule, event)
         if accepted:
-            self.log_panel.add_system(f"[{rule.name}] test dijalankan")
+            self.log_panel.add_system(tr("[{rule}] test dijalankan", rule=rule.name))
             self.tabs.setCurrentWidget(self.log_panel)
         else:
-            QMessageBox.warning(self, "Tidak bisa dijalankan", reason)
+            QMessageBox.warning(self, tr("Tidak bisa dijalankan"), reason)
 
     # --------------------------------------------------------------- result
 
@@ -433,12 +435,12 @@ class MainWindow(QMainWindow):
         if checked:
             self.safety.panic()
             dropped = self.queue.clear()
-            self.panic_button.setText("PANIC AKTIF - klik untuk lanjut")
-            self.log_panel.add_system(f"PANIC aktif. {dropped} aksi dibatalkan.", error=True)
+            self.panic_button.setText(tr("PANIC AKTIF - klik untuk lanjut"))
+            self.log_panel.add_system(tr("PANIC aktif. {n} aksi dibatalkan.", n=dropped), error=True)
         else:
             self.safety.resume()
-            self.panic_button.setText("PANIC - HENTIKAN SEMUA")
-            self.log_panel.add_system("PANIC dimatikan, aksi berjalan lagi.")
+            self.panic_button.setText(tr("PANIC - HENTIKAN SEMUA"))
+            self.log_panel.add_system(tr("PANIC dimatikan, aksi berjalan lagi."))
 
     # --------------------------------------------------------------- lainnya
 
@@ -531,9 +533,9 @@ class MainWindow(QMainWindow):
     def _on_rules_changed(self, rules: list[Rule]) -> None:
         if not getattr(self, "_rules_ok", True):
             QMessageBox.warning(
-                self, "Rules tidak tersimpan",
-                "config/rules.yaml rusak dan belum diperbaiki. Penyimpanan "
-                "dibatalkan agar rule lama tidak tertimpa.",
+                self, tr("Rules tidak tersimpan"),
+                tr("config/rules.yaml rusak dan belum diperbaiki. Penyimpanan dibatalkan "
+                   "agar rule lama tidak tertimpa."),
             )
             return
         self.rules = rules
@@ -548,14 +550,14 @@ class MainWindow(QMainWindow):
         before = self.adb.adb_path
         self.adb.adb_path = find_adb(self.settings["adb"]["path"])
         if self.adb.adb_path and self.adb.adb_path != before:
-            self.log_panel.add_system(f"adb sekarang memakai bawaan scrcpy: {self.adb.adb_path}")
+            self.log_panel.add_system(tr("adb sekarang memakai bawaan scrcpy: {path}", path=self.adb.adb_path))
             self.devices_panel.refresh()
 
     def _on_wireless_connected(self, serial: str) -> None:
         """Device wireless baru tersambung - jadikan target aktif."""
         self._on_serial_changed(serial)
         self.devices_panel.refresh()
-        self.log_panel.add_system(f"Device wireless tersambung: {serial}")
+        self.log_panel.add_system(tr("Device wireless tersambung: {serial}", serial=serial))
 
     def _on_serial_changed(self, serial: str) -> None:
         self.adb.set_serial(serial)
@@ -572,7 +574,7 @@ class MainWindow(QMainWindow):
         save_settings(self.settings)
 
     def _tick(self) -> None:
-        self.queue_label.setText(f"Antrian: {self.queue.pending()}")
+        self.queue_label.setText(tr("Antrian: {n}", n=self.queue.pending()))
         if self.tabs.currentWidget() is getattr(self, "home_panel", None):
             self.home_panel.refresh()
         if self.overlay.running:
@@ -580,7 +582,7 @@ class MainWindow(QMainWindow):
             if self.tabs.currentWidget() is self.overlay_panel:
                 self.overlay_panel.refresh_status()
         else:
-            self.overlay_label.setText("Overlay: mati")
+            self.overlay_label.setText(tr("Overlay: mati"))
 
     def closeEvent(self, event) -> None:
         self._stop_live()

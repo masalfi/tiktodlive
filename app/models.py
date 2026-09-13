@@ -11,6 +11,8 @@ import uuid
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
+from app.i18n import tr
+
 # Jenis event yang dikenali sistem
 EVENT_KINDS = ("gift", "comment", "like", "follow", "share", "join")
 
@@ -101,7 +103,7 @@ class Rule:
     def from_dict(cls, data: dict[str, Any]) -> "Rule":
         return cls(
             id=data.get("id") or uuid.uuid4().hex[:8],
-            name=data.get("name", "Rule tanpa nama"),
+            name=data.get("name", tr("Rule tanpa nama")),
             enabled=bool(data.get("enabled", True)),
             event_kind=data.get("event_kind", "gift"),
             conditions=dict(data.get("conditions") or {}),
